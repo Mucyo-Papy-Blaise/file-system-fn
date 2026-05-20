@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/api/api-client";
 import { categoryApi } from "@/api/category.api";
 import type { CategoryFilters, CreateCategoryInput, UpdateCategoryInput } from "@/types/category";
 
@@ -45,6 +46,27 @@ export function useCreateCategory() {
     mutate: mutation.mutate,
     isLoading: mutation.isPending,
     isError: mutation.isError,
+  };
+}
+
+export function useBulkCreateCategories() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (categories: string[]) =>
+      apiClient.post<{ success: boolean }>("/categories/bulk", {
+        categories,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
+  });
+
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isLoading: mutation.isPending,
+    isError: mutation.isError,
+    error: mutation.error,
   };
 }
 

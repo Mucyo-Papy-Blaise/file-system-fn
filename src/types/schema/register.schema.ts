@@ -1,10 +1,11 @@
 import { z } from "zod";
 import type { RegisterErrors, RegisterFormValues } from "@/types/register";
+import { OrganizationType } from "@/types/enum";
 
 export const registerSchema = z
   .object({
     organizationName: z.string().trim().min(2, "Organization name must have at least 2 characters."),
-    organizationType: z.enum(["company", "individual"]),
+    organizationType: z.nativeEnum(OrganizationType),
     organizationEmail: z
       .string()
       .trim()
@@ -27,7 +28,7 @@ export const registerSchema = z
     message: "Passwords do not match.",
   })
   .superRefine((value, ctx) => {
-    if (value.organizationType === "company") {
+    if (value.organizationType === OrganizationType.COMPANY) {
       if (!value.organizationEmail) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

@@ -71,10 +71,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  if (isDashboardRoute && role === "ADMIN" && !isSetupComplete) {
-    return NextResponse.redirect(new URL("/setup/categories", request.url));
-  }
-
   if (isSetupRoute && role === "ADMIN" && isSetupComplete) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }

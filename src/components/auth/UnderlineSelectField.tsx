@@ -1,6 +1,7 @@
 "use client";
 
 import type { OrganizationType } from "@/types/enum";
+import { OrganizationType as OrgType } from "@/types/enum";
 
 interface UnderlineSelectFieldProps {
   id: string;
@@ -46,8 +47,8 @@ export function UnderlineSelectField({
             }`,
           }}
         >
-          <option value="company">Company</option>
-          <option value="individual">Individual</option>
+          <option value={OrgType.COMPANY}>Company</option>
+          <option value={OrgType.INDIVIDUAL}>Individual</option>
         </select>
 
         <svg

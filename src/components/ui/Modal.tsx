@@ -10,6 +10,9 @@ interface ModalProps {
   children: ReactNode;
   variant?: "center" | "side";
   overlayClassName?: string;
+  disableClose?: boolean;
+  disableOverlayClick?: boolean;
+  hideHeader?: boolean;
 }
 
 export function Modal({
@@ -19,16 +22,20 @@ export function Modal({
   children,
   variant = "center",
   overlayClassName,
+  disableClose = false,
+  disableOverlayClick = false,
+  hideHeader = false,
 }: ModalProps) {
   if (!isOpen) return null;
 
   const isSideVariant = variant === "side";
+  const hasHeader = !hideHeader && (Boolean(title) || !disableClose);
 
   return (
     <div
       className={[
-        "fixed inset-0 z-50 flex",
-        isSideVariant ? "items-stretch justify-end" : "items-center justify-center p-4",
+        "fixed inset-0 z-50 flex items-start",
+        isSideVariant ? "justify-end" : "justify-center px-4 pb-4 pt-0",
       ].join(" ")}
     >
       <button
@@ -39,7 +46,7 @@ export function Modal({
           isSideVariant ? "bg-black/55" : "bg-black/30",
           overlayClassName ?? (isSideVariant ? "" : "backdrop-blur-[1px]"),
         ].join(" ")}
-        onClick={onClose}
+        onClick={disableOverlayClick ? undefined : onClose}
       />
 
       <div
@@ -47,20 +54,35 @@ export function Modal({
           "relative z-10 bg-surface shadow-[var(--shadow-xl)]",
           isSideVariant
             ? "flex h-full w-full max-w-[720px] flex-col border-l border-black/10 px-5 pb-5 pt-0 sm:px-7 sm:pb-7 sm:pt-0"
-            : "w-full max-w-lg rounded-3xl border border-default p-6",
+            : "w-full max-w-lg rounded border border-default p-6",
         ].join(" ")}
       >
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+        {hideHeader && !disableClose && isSideVariant ? (
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl p-2 text-secondary transition hover:bg-[var(--color-bg-secondary)] hover:text-foreground"
+            className="absolute right-5 top-5 z-20 rounded-xl p-2 text-secondary transition hover:bg-[var(--color-bg-secondary)] hover:text-foreground sm:right-7"
             aria-label="Close modal"
           >
             <X className="h-5 w-5" />
           </button>
-        </div>
+        ) : null}
+
+        {hasHeader ? (
+          <div className={isSideVariant ? "mb-5 flex items-start justify-between gap-4 pt-0" : "mb-5 flex items-start justify-between gap-4"}>
+            {title ? <h2 className="text-xl font-semibold text-foreground">{title}</h2> : <div />}
+            {!disableClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl p-2 text-secondary transition hover:bg-[var(--color-bg-secondary)] hover:text-foreground"
+                aria-label="Close modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className={isSideVariant ? "flex-1 overflow-y-auto" : undefined}>
           {children}

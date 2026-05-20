@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { InviteMemberModal } from "@/components/members/InviteMemberModal";
 import { MembersTable } from "@/components/members/MembersTable";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { useAuth } from "@/lib/auth-context";
 import { useGetInvitations } from "@/lib/hooks/useInvitations";
 import type { Member } from "@/types/member";
@@ -73,7 +74,30 @@ export default function DashboardMembersPage() {
   };
 
   if (isLoading || !user) {
-    return null;
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-3">
+            <LoadingSkeleton width={240} height={32} />
+            <LoadingSkeleton width="60%" height={16} />
+          </div>
+          <LoadingSkeleton width={140} height={44} rounded="1.5rem" />
+        </div>
+        <div className="rounded-3xl border border-default bg-surface p-6">
+          <div className="space-y-4">
+            {[...Array(4)].map((index) => (
+              <div key={index} className="grid gap-4 md:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+                <LoadingSkeleton width="100%" height={20} />
+                <LoadingSkeleton width="100%" height={20} />
+                <LoadingSkeleton width="100%" height={20} />
+                <LoadingSkeleton width="100%" height={20} />
+                <LoadingSkeleton width={32} height={32} rounded="9999px" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

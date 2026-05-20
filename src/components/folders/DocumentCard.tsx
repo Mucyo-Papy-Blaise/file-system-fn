@@ -1,179 +1,275 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import {
-  FileText,
-  Image as ImageIcon,
-  MoreVertical,
   Download,
   Eye,
+  ExternalLink,
+  FileImage,
+  FileSpreadsheet,
+  FileText,
+  MoreHorizontal,
+  Pencil,
   Trash2,
 } from "lucide-react";
-import { Badge } from "../ui/Badge";
 import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
+import { DocumentPreview } from "@/components/ui/DocumentPreview";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface DocumentCardProps {
   document: {
     id: string;
+    fileUrl?: string;
     fileName: string;
-    category: string;
-    date: string;
+    title?: string | null;
+    summary?: string | null;
+    category?: string | null;
+    createdAt: string;
+    updatedAt?: string;
     uploadedBy: string;
+    folder?: string | { id: string; name: string };
   };
   onDelete?: (documentId: string) => void;
   onView?: (documentId: string) => void;
+  onDetails?: (documentId: string) => void;
   onDownload?: (documentId: string) => void;
+  onRename?: (documentId: string, newName: string) => void;
   isOwner?: boolean;
 }
 
-function getFileIcon(fileName: string) {
-  const ext = fileName.split(".").pop()?.toLowerCase();
-  switch (ext) {
-    case "pdf":
-      return <FileText className="h-5 w-5 text-red-600" />;
+function getFileMeta(fileName: string) {
+  const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
+
+  switch (extension) {
     case "png":
     case "jpg":
     case "jpeg":
     case "gif":
-      return <ImageIcon className="h-5 w-5 text-blue-600" />;
+    case "webp":
+      return {
+        icon: <FileImage className="h-5 w-5 text-sky-600" />,
+        typeLabel: "Image file",
+        chipClassName: "bg-sky-50 text-sky-700",
+        mimeType: `image/${extension === "jpg" ? "jpeg" : extension}`,
+      };
+    case "xls":
+    case "xlsx":
+    case "csv":
+      return {
+        icon: <FileSpreadsheet className="h-5 w-5 text-emerald-600" />,
+        typeLabel: "Spreadsheet",
+        chipClassName: "bg-emerald-50 text-emerald-700",
+        mimeType: "application/vnd.ms-excel",
+      };
+    case "pdf":
+      return {
+        icon: <FileText className="h-5 w-5 text-red-600" />,
+        typeLabel: "PDF document",
+        chipClassName: "bg-red-50 text-red-700",
+        mimeType: "application/pdf",
+      };
     default:
-      return <FileText className="h-5 w-5 text-secondary" />;
+      return {
+        icon: <FileText className="h-5 w-5 text-slate-600" />,
+        typeLabel: extension ? `${extension.toUpperCase()} file` : "Document",
+        chipClassName: "bg-slate-100 text-slate-700",
+        mimeType: "application/octet-stream",
+      };
   }
 }
 
 export function DocumentCard({
-  document: file,
+  document,
   onDelete,
   onView,
+  onDetails,
   onDownload,
+  onRename,
   isOwner = false,
 }: DocumentCardProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [newName, setNewName] = useState(document.title || document.fileName);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
+  const fileMeta = getFileMeta(document.fileName);
+  const displayName = document.title || document.fileName;
+
+  const handleRenameSubmit = () => {
+    const trimmedName = newName.trim();
+
+    if (!trimmedName) {
+      setNewName(displayName);
+      setIsRenaming(false);
+      return;
     }
 
-    if (isMenuOpen && typeof window !== "undefined") {
-      window.document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        window.document.removeEventListener("mousedown", handleClickOutside);
+    if (trimmedName !== displayName) {
+      onRename?.(document.id, trimmedName);
     }
-  }, [isMenuOpen]);
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    setNewName(trimmedName);
+    setIsRenaming(false);
   };
 
-  const handleConfirmDelete = () => {
-    onDelete?.(file.id);
-    setIsMenuOpen(false);
+  const handleDeleteConfirm = () => {
+    onDelete?.(document.id);
+    setIsDeleteOpen(false);
   };
 
   return (
     <>
-      <div className="group relative rounded border border-default bg-surface p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-        {/* Menu Button */}
-        {isOwner && (
-          <div
-            ref={menuRef}
-            className="absolute right-4 top-4 opacity-0 transition-opacity group-hover:opacity-100"
-          >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsMenuOpen(!isMenuOpen);
-              }}
-              className="rounded-2xl p-2 text-secondary transition hover:bg-[var(--color-bg-secondary)] hover:text-foreground"
-            >
-              <MoreVertical className="h-5 w-5" />
-            </button>
+      <div className="grid grid-cols-[minmax(320px,1.8fr)_180px_180px_160px_184px] items-center gap-4 border-t border-default px-4 py-3 text-sm transition-colors hover:bg-[var(--color-bg-secondary)]">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-[var(--color-bg-secondary)]">
+            {fileMeta.icon}
+          </div>
 
-            {isMenuOpen && (
-              <div className="absolute right-0 z-50 mt-2 min-w-[140px] overflow-hidden rounded-2xl border border-default bg-surface shadow-lg">
+          <div className="min-w-0">
+            {isRenaming ? (
+              <input
+                autoFocus
+                type="text"
+                value={newName}
+                onChange={(event) => setNewName(event.target.value)}
+                onBlur={handleRenameSubmit}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    handleRenameSubmit();
+                  }
+
+                  if (event.key === "Escape") {
+                    setIsRenaming(false);
+                    setNewName(displayName);
+                  }
+                }}
+                className="w-full border border-[var(--color-border-focus)] bg-surface px-3 py-2 text-sm font-medium text-foreground outline-none"
+              />
+            ) : (
+              <>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onView?.(file.id);
-                    setIsMenuOpen(false);
+                  type="button"
+                  onClick={() => {
+                    if (onDetails) {
+                      onDetails(document.id);
+                    } else {
+                      onView?.(document.id);
+                    }
                   }}
-                  className="flex w-full items-center gap-2 border-b border-default px-4 py-3 text-sm hover:bg-[var(--color-bg-secondary)]"
+                  className="max-w-full truncate text-left font-medium text-foreground transition hover:text-primary"
+                >
+                  {displayName}
+                </button>
+                <p className="truncate text-xs text-secondary">
+                  Uploaded by {document.uploadedBy}
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+
+        <p className="truncate text-secondary">
+          {new Date(document.updatedAt || document.createdAt).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </p>
+        <p className="truncate text-secondary">{fileMeta.typeLabel}</p>
+        <div>
+          <span
+            className={`inline-flex px-2.5 py-1 text-xs font-medium ${fileMeta.chipClassName}`}
+          >
+            {document.category || "Unsorted"}
+          </span>
+        </div>
+
+        <div className="relative flex items-center justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="p-2 text-secondary transition hover:bg-[var(--color-bg-tertiary)] hover:text-foreground"
+              ariaLabel={`Document actions for ${displayName}`}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[180px]">
+              <DropdownMenuItem
+                onClick={() => setIsPreviewOpen(true)}
+                className="flex items-center gap-2 border-b border-default text-foreground"
+              >
+                <Eye className="h-4 w-4" />
+                Preview
+              </DropdownMenuItem>
+              {onDetails ? (
+                <DropdownMenuItem
+                  onClick={() => onDetails(document.id)}
+                  className="flex items-center gap-2 border-b border-default text-foreground"
                 >
                   <Eye className="h-4 w-4" />
-                  View
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDownload?.(file.id);
-                    setIsMenuOpen(false);
+                  Details
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem
+                onClick={() => onView?.(document.id)}
+                className="flex items-center gap-2 border-b border-default text-foreground"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onDownload?.(document.id)}
+                className="flex items-center gap-2 border-b border-default text-foreground"
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </DropdownMenuItem>
+              {isOwner ? (
+                <DropdownMenuItem
+                  onClick={() => {
+                    setIsRenaming(true);
                   }}
-                  className="flex w-full items-center gap-2 border-b border-default px-4 py-3 text-sm hover:bg-[var(--color-bg-secondary)]"
+                  className="flex items-center gap-2 border-b border-default text-foreground"
                 >
-                  <Download className="h-4 w-4" />
-                  Download
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  <Pencil className="h-4 w-4" />
+                  Rename
+                </DropdownMenuItem>
+              ) : null}
+              {isOwner ? (
+                <DropdownMenuItem
+                  onClick={() => {
                     setIsDeleteOpen(true);
-                    setIsMenuOpen(false);
                   }}
-                  className="flex w-full items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50"
+                  className="flex items-center gap-2 text-red-600 hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4" />
                   Delete
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Document Icon and Content */}
-        <div className="flex flex-col">
-          {/* Icon */}
-          <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-bg-secondary)]">
-              {getFileIcon(file.fileName)}
-            </div>
-          </div>
-
-          {/* File Name */}
-          <h3 className="mb-3 truncate text-sm font-semibold text-foreground">
-            {file.fileName}
-          </h3>
-
-          {/* Category Badge */}
-          <div className="mb-3">
-            <Badge label={file.category} variant="category" />
-          </div>
-
-          {/* Date and Uploader */}
-          <div className="space-y-1 text-xs text-secondary">
-            <p>{formatDate(file.date)}</p>
-            <p className="truncate">By {file.uploadedBy}</p>
-          </div>
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
-        onConfirm={handleConfirmDelete}
+        onConfirm={handleDeleteConfirm}
         title="Delete Document"
-        description={`Are you sure you want to delete "${file.fileName}"? This action cannot be undone.`}
-        itemNameToConfirm={file.fileName}
+        description={`Are you sure you want to delete "${displayName}"? This action cannot be undone.`}
+        itemNameToConfirm={displayName}
+      />
+
+      <DocumentPreview
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        fileUrl={document.fileUrl || ""}
+        fileName={document.fileName}
+        fileType={fileMeta.mimeType}
       />
     </>
   );

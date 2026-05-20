@@ -42,7 +42,7 @@ export default function RegisterPage() {
     setValues((previous) => {
       const nextValues = { ...previous, [key]: value };
 
-      if (key === "organizationType" && value === "individual") {
+      if (key === "organizationType" && value === OrganizationType.INDIVIDUAL) {
         nextValues.organizationEmail = "";
       }
 
@@ -51,7 +51,7 @@ export default function RegisterPage() {
 
     setErrors((previous) => {
       const nextErrors = { ...previous, [key]: undefined };
-      if (key === "organizationType" && value === "individual") {
+      if (key === "organizationType" && value === OrganizationType.INDIVIDUAL) {
         nextErrors.organizationEmail = undefined;
       }
       return nextErrors;

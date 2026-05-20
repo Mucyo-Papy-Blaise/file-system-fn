@@ -46,7 +46,7 @@ export function InviteMemberModal({ isOpen, onClose }: InviteMemberModalProps) {
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="mt-2 w-full rounded-2xl border border-default bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+            className="mt-2 w-full rounded border border-default bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
             placeholder="member@example.com"
           />
         </div>
@@ -56,7 +56,7 @@ export function InviteMemberModal({ isOpen, onClose }: InviteMemberModalProps) {
             type="button"
             onClick={handleClose}
             disabled={inviteMember.isLoading}
-            className="rounded-2xl border border-default bg-background px-4 py-3 text-sm font-semibold text-secondary transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded border border-default bg-background px-4 py-3 text-sm font-semibold text-secondary transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancel
           </button>
@@ -64,7 +64,7 @@ export function InviteMemberModal({ isOpen, onClose }: InviteMemberModalProps) {
             type="button"
             onClick={() => void handleSubmit()}
             disabled={inviteMember.isLoading}
-            className="rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {inviteMember.isLoading ? "Sending..." : "Send Invite"}
           </button>

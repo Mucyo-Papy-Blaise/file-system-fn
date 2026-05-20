@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Tag, Trash2 } from "lucide-react";
 import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
 import type { Category } from "@/types/category";
 
@@ -25,34 +25,35 @@ export function CategoryCard({
 
   return (
     <>
-      <article className="rounded-3xl border border-default bg-surface p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-primary">Category</p>
-            <h3 className="mt-3 text-lg font-semibold text-foreground">{category.name}</h3>
+      <div className="grid items-center gap-4 border-b border-default px-4 py-4 text-sm text-foreground md:grid-cols-[2.5fr_1fr_1fr_auto]">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[var(--color-bg-secondary)] text-primary">
+            <Tag className="h-5 w-5" />
           </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">{category.name}</p>
+            <p className="mt-1 truncate text-xs text-secondary">
+              {category.description ?? "Category"}
+            </p>
+          </div>
+        </div>
+
+        <div className="truncate text-secondary">{category.documentCount ?? 0} documents</div>
+
+        <div className="truncate text-secondary">{category.createdAt}</div>
+
+        <div className="flex justify-end">
           <button
             type="button"
             onClick={() => setIsDeleteOpen(true)}
             disabled={isDeleting}
-            className="rounded-2xl p-2 text-secondary transition hover:bg-[var(--color-bg-secondary)] hover:text-foreground"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-default bg-surface text-secondary transition hover:bg-[var(--color-bg-secondary)] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
             aria-label={`Delete ${category.name}`}
           >
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-
-        <div className="mt-6 flex flex-col gap-4 text-sm text-secondary">
-          <div className="flex items-center justify-between rounded-2xl bg-[var(--color-bg-secondary)] p-3">
-            <span>Documents</span>
-            <span className="font-semibold text-foreground">{category.documentCount}</span>
-          </div>
-          <div className="flex items-center justify-between rounded-2xl bg-[var(--color-bg-secondary)] p-3">
-            <span>Date created</span>
-            <span className="font-semibold text-foreground">{category.createdAt}</span>
-          </div>
-        </div>
-      </article>
+      </div>
 
       <DeleteConfirmationModal
         isOpen={isDeleteOpen}

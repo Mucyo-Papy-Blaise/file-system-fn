@@ -6,14 +6,18 @@ import {
   FileText,
   Folder,
   FolderOpen,
+  Inbox,
   LayoutDashboard,
+  LibraryBig,
   LogOut,
+  Search,
   Tag,
   Users,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useGetInbox } from "@/lib/hooks/useDocuments";
 import { Role } from "@/types/enum";
 import type { AuthUser } from "@/types/auth";
 import { useAuth } from "@/lib/auth-context";
@@ -33,6 +37,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { href: "/dashboard/search", label: "Search", icon: Search },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   {
     href: "/dashboard/folders",
@@ -41,8 +46,10 @@ const navItems: NavItem[] = [
     roles: [Role.ADMIN],
   },
   { href: "/dashboard/my-folders", label: "My Folders", icon: Folder },
+  // { href: "/dashboard/inbox", label: "Inbox", icon: Inbox },
   { href: "/dashboard/documents", label: "My Documents", icon: FileText },
   { href: "/dashboard/categories", label: "Categories", icon: Tag },
+  { href: "/dashboard/collections", label: "Collections", icon: LibraryBig },
   {
     href: "/dashboard/members",
     label: "Members",
@@ -66,6 +73,8 @@ export function Sidebar({ isOpen, pathname, user, onClose }: SidebarProps) {
   const { logout } = useAuth();
 
   const role = user?.role === Role.ADMIN ? Role.ADMIN : Role.MEMBER;
+  const { documents: inboxDocuments } = useGetInbox();
+  const inboxCount = inboxDocuments.length;
 
   const visibleItems = navItems.filter(
     (item) => !item.roles || item.roles.includes(role),
@@ -148,6 +157,11 @@ export function Sidebar({ isOpen, pathname, user, onClose }: SidebarProps) {
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span>{item.label}</span>
+                {item.href === "/dashboard/inbox" && inboxCount > 0 ? (
+                  <span className="ml-auto rounded-full bg-red-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
+                    {inboxCount}
+                  </span>
+                ) : null}
               </Link>
             );
           })}

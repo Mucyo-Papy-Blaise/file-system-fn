@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { ApiError } from "@/api/api-client";
+import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { AcceptInvitationFormPanel } from "@/components/auth/AcceptInvitationFormPanel";
 import { VisualPanel } from "@/components/auth/Visualpanel";
 import type { AcceptInvitationErrors, AcceptInvitationFormValues } from "@/types/accept-invitation.ts";
@@ -78,10 +79,14 @@ export default function AcceptInvitationPage() {
   if (isLoadingInvitation) {
     return (
       <main className="relative flex h-screen w-screen overflow-hidden bg-background">
-        <div className="flex h-full w-full items-center justify-center">
-          <div className="text-center">
-            <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto"></div>
-            <p className="text-sm text-muted">Loading invitation...</p>
+        <div className="flex h-full w-full items-center justify-center px-6">
+          <div className="w-full max-w-lg space-y-6 rounded-[32px] bg-surface p-8 shadow-sm">
+            <LoadingSkeleton width={220} height={28} />
+            <LoadingSkeleton width="90%" height={16} />
+            <LoadingSkeleton width="75%" height={16} />
+            <LoadingSkeleton width="100%" height={56} rounded="1rem" />
+            <LoadingSkeleton width="100%" height={56} rounded="1rem" />
+            <LoadingSkeleton width="100%" height={56} rounded="1rem" />
           </div>
         </div>
       </main>

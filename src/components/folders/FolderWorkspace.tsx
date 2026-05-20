@@ -1,166 +1,162 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { FolderPlus, FolderSearch, Plus, Upload as UploadIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Breadcrumb } from "@/components/folders/Breadcrumb";
 import { DocumentCard } from "@/components/folders/DocumentCard";
 import { FolderCard } from "@/components/folders/FolderCard";
+import { DocumentDetails } from "@/components/documents/DocumentDetails";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { MockDocument, MockFolder } from "@/lib/mockData";
-import { usePathname } from "next/navigation";
-
-const COMPANY_ROOT_ID = "f-root";
-const PERSONAL_ROOT_ID = "my-folders-root";
-
-interface BreadcrumbItem {
-  id: string;
-  name: string;
-}
+import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
+import { SortBar } from "@/components/ui/SortBar";
+import { useDashboard } from "@/lib/dashboard-context";
+import { useDeleteDocument, useUpdateDocument } from "@/lib/hooks/useDocuments";
+import {
+  useCreateFolder,
+  useDeleteFolder,
+  useGetFolderContents,
+  useGetRootFolders,
+  useUpdateFolder,
+} from "@/lib/hooks/useFolders";
+import type { AuthUser } from "@/types/auth";
+import type { SortOption } from "@/types/document";
+import { Role } from "@/types/enum";
 
 interface FolderWorkspaceProps {
-  scope: "company" | "personal";
   title: string;
   description: string;
-  initialFolders: MockFolder[];
-  initialDocuments: MockDocument[];
-  currentUserName: string;
+  currentUser: AuthUser;
 }
 
+const NEW_FOLDER_ID = "pending-new-folder";
+
 export function FolderWorkspace({
-  scope,
   title,
   description,
-  initialFolders,
-  initialDocuments,
-  currentUserName,
+  currentUser,
 }: FolderWorkspaceProps) {
-  const pathname = usePathname();
-  const rootId = scope === "company" ? COMPANY_ROOT_ID : PERSONAL_ROOT_ID;
-  const [currentFolderId, setCurrentFolderId] = useState<string>(rootId);
-  const [folders, setFolders] = useState<MockFolder[]>(initialFolders);
-  const [documents, setDocuments] = useState<MockDocument[]>(initialDocuments);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [pendingFolderId, setPendingFolderId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>("date_desc");
+  const { openUpload, setUploadFolderId } = useDashboard();
 
-  const isFoldersRootPage = pathname === "/dashboard/folders";
+  const {
+    folders: rootFolders,
+    isLoading: isRootLoading,
+    isError: isRootError,
+  } = useGetRootFolders();
+  const {
+    folderContents,
+    isLoading: isContentsLoading,
+    isError: isContentsError,
+  } = useGetFolderContents(currentFolderId);
 
-  const ownedFolders = useMemo(
-    () => folders.filter((folder) => folder.createdBy === currentUserName),
-    [currentUserName, folders],
-  );
-  const ownedDocuments = useMemo(
-    () =>
-      documents.filter((document) => document.uploadedBy === currentUserName),
-    [currentUserName, documents],
-  );
-  const ownedFolderIds = useMemo(
-    () => new Set(ownedFolders.map((folder) => folder.id)),
-    [ownedFolders],
-  );
+  const { mutate: createFolder } = useCreateFolder();
+  const { mutate: updateFolder } = useUpdateFolder();
+  const { mutate: deleteFolder } = useDeleteFolder();
+  const { mutate: updateDocument } = useUpdateDocument();
+  const { mutate: deleteDocument } = useDeleteDocument();
+
+  const isLoading = currentFolderId ? isContentsLoading : isRootLoading;
+  const isError = currentFolderId ? isContentsError : isRootError;
+  const isAdmin = currentUser.role === Role.ADMIN;
+  const isInFolder = currentFolderId !== null;
 
   const breadcrumbPath = useMemo(() => {
-    if (scope === "company") {
-      const path: BreadcrumbItem[] = [];
-      let activeId: string | null = currentFolderId;
+    const rootItem = { id: "root", name: title };
 
-      while (activeId) {
-        const folder = folders.find((item) => item.id === activeId);
-        if (!folder) break;
+    if (!currentFolderId) {
+      return [rootItem];
+    }
 
-        path.unshift({ id: folder.id, name: folder.name });
-        activeId = folder.parentId;
+    return [rootItem, ...(folderContents?.breadcrumb ?? [])];
+  }, [currentFolderId, folderContents?.breadcrumb, title]);
+
+  const currentFolderName = breadcrumbPath[breadcrumbPath.length - 1]?.name ?? title;
+  const folders = currentFolderId ? folderContents?.children ?? [] : rootFolders;
+  const documents = currentFolderId ? folderContents?.documents ?? [] : [];
+
+  const placeholderFolder = pendingFolderId
+    ? {
+        id: NEW_FOLDER_ID,
+        name: "New Folder",
+        slug: "new-folder",
+        parentId: currentFolderId,
+        organizationId: currentUser.organizationId,
+        itemCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: { id: currentUser.id, name: currentUser.name },
       }
+    : null;
 
-      return path;
+  const visibleFolders = placeholderFolder ? [placeholderFolder, ...folders] : folders;
+  const sortedFolders = useMemo(() => {
+    const items = [...visibleFolders];
+
+    if (sortBy === "name_asc" || sortBy === "name_desc") {
+      items.sort((left, right) => left.name.localeCompare(right.name));
+      if (sortBy === "name_desc") {
+        items.reverse();
+      }
+      return items;
     }
 
-    if (currentFolderId === PERSONAL_ROOT_ID) {
-      return [{ id: PERSONAL_ROOT_ID, name: "My Folders" }];
-    }
-
-    const path: BreadcrumbItem[] = [];
-    let activeId: string | null = currentFolderId;
-
-    while (activeId && ownedFolderIds.has(activeId)) {
-      const folder = folders.find((item) => item.id === activeId);
-      if (!folder) break;
-
-      path.unshift({ id: folder.id, name: folder.name });
-      activeId =
-        folder.parentId && ownedFolderIds.has(folder.parentId)
-          ? folder.parentId
-          : null;
-    }
-
-    return [{ id: PERSONAL_ROOT_ID, name: "My Folders" }, ...path];
-  }, [currentFolderId, folders, ownedFolderIds, scope]);
-
-  const folderContents = useMemo(() => {
-    if (scope === "company") {
-      return {
-        folders: folders.filter(
-          (folder) => folder.parentId === currentFolderId,
-        ),
-        documents: documents.filter(
-          (document) => document.folderId === currentFolderId,
-        ),
-      };
-    }
-
-    if (currentFolderId === PERSONAL_ROOT_ID) {
-      return {
-        folders: ownedFolders.filter(
-          (folder) => !folder.parentId || !ownedFolderIds.has(folder.parentId),
-        ),
-        documents: ownedDocuments.filter(
-          (document) =>
-            !document.folderId || !ownedFolderIds.has(document.folderId),
-        ),
-      };
-    }
-
-    return {
-      folders: ownedFolders.filter(
-        (folder) => folder.parentId === currentFolderId,
-      ),
-      documents: ownedDocuments.filter(
-        (document) => document.folderId === currentFolderId,
-      ),
-    };
-  }, [
-    currentFolderId,
-    documents,
-    folders,
-    ownedDocuments,
-    ownedFolderIds,
-    ownedFolders,
-    scope,
-  ]);
-
-  const handleNavigateToFolder = (folderId: string) => {
-    setCurrentFolderId(folderId);
-  };
-
-  const getTargetParentId = () =>
-    scope === "personal" && currentFolderId === PERSONAL_ROOT_ID
-      ? COMPANY_ROOT_ID
-      : currentFolderId;
-
-  const getNextNewFolderName = () => {
-    const visibleFolderNames = new Set(
-      folderContents.folders.map((folder) => folder.name.toLowerCase()),
+    items.sort(
+      (left, right) =>
+        new Date(left.createdAt ?? left.updatedAt).getTime() -
+        new Date(right.createdAt ?? right.updatedAt).getTime(),
     );
 
-    if (!visibleFolderNames.has("new folder")) {
-      return "New Folder";
+    if (sortBy === "date_desc") {
+      items.reverse();
     }
 
-    let copyNumber = 1;
-    while (visibleFolderNames.has(`new folder (${copyNumber})`)) {
-      copyNumber += 1;
+    return items;
+  }, [sortBy, visibleFolders]);
+  const sortedDocuments = useMemo(() => {
+    const items = [...documents];
+
+    if (sortBy === "name_asc" || sortBy === "name_desc") {
+      items.sort((left, right) => left.fileName.localeCompare(right.fileName));
+      if (sortBy === "name_desc") {
+        items.reverse();
+      }
+      return items;
     }
 
-    return `New Folder (${copyNumber})`;
+    items.sort(
+      (left, right) =>
+        new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+    );
+
+    if (sortBy === "date_desc") {
+      items.reverse();
+    }
+
+    return items;
+  }, [documents, sortBy]);
+  const hasContent = visibleFolders.length > 0 || documents.length > 0;
+
+  useEffect(() => {
+    setUploadFolderId(currentFolderId);
+  }, [currentFolderId, setUploadFolderId]);
+
+  const handleUploadDocument = (folderId?: string | null) => {
+    openUpload(folderId ?? currentFolderId);
+  };
+
+  const handleNavigateToFolder = (folderId: string) => {
+    setCurrentFolderId(folderId === "root" ? null : folderId);
+  };
+
+  const handleOpenFolder = (folderId: string) => {
+    if (folderId === pendingFolderId) {
+      return;
+    }
+
+    setCurrentFolderId(folderId);
   };
 
   const handleStartNewFolder = () => {
@@ -168,165 +164,322 @@ export function FolderWorkspace({
       return;
     }
 
-    const newFolderId = `f-${Date.now()}`;
-    const newFolder: MockFolder = {
-      id: newFolderId,
-      name: getNextNewFolderName(),
-      parentId: getTargetParentId(),
-      itemCount: 0,
-      createdBy: currentUserName,
-      createdAt: new Date().toISOString().split("T")[0],
-    };
+    setPendingFolderId(NEW_FOLDER_ID);
+  };
 
-    setFolders((currentFolders) => [...currentFolders, newFolder]);
-    setPendingFolderId(newFolderId);
+  const handleCreateFolder = (name: string) => {
+    createFolder(
+      { name, parentId: currentFolderId },
+      {
+        onSuccess: () => {
+          toast.success("Folder created successfully");
+          setPendingFolderId(null);
+        },
+        onError: (error) => {
+          toast.error(
+            error instanceof Error ? error.message : "Unable to create folder.",
+          );
+        },
+      },
+    );
   };
 
   const handleRenameFolder = (folderId: string, newName: string) => {
-    const folder = folders.find((item) => item.id === folderId);
-    if (!folder || folder.createdBy !== currentUserName) {
-      toast.error("You can only rename your own folders");
-      return;
-    }
-
-    setFolders((currentFolders) =>
-      currentFolders.map((item) =>
-        item.id === folderId ? { ...item, name: newName } : item,
-      ),
-    );
-
     if (folderId === pendingFolderId) {
       return;
     }
 
-    toast.success("Folder renamed successfully");
+    updateFolder(
+      { id: folderId, data: { name: newName } },
+      {
+        onSuccess: () => toast.success("Folder renamed successfully"),
+        onError: (error) => {
+          toast.error(
+            error instanceof Error ? error.message : "Unable to rename folder.",
+          );
+        },
+      },
+    );
   };
 
   const handleRenameComplete = (folderId: string, finalName: string) => {
-    if (folderId !== pendingFolderId) {
-      return;
+    if (folderId === pendingFolderId) {
+      handleCreateFolder(finalName);
     }
-
-    setPendingFolderId(null);
-    toast.success(`Folder "${finalName}" created successfully`);
   };
 
   const handleDeleteFolder = (folderId: string) => {
-    const folderToDelete = folders.find((folder) => folder.id === folderId);
-    if (!folderToDelete || folderToDelete.createdBy !== currentUserName) {
-      toast.error("You can only delete your own folders");
-      return;
-    }
+    deleteFolder(folderId, {
+      onSuccess: () => {
+        toast.success("Folder deleted successfully");
+        if (currentFolderId === folderId) {
+          setCurrentFolderId(null);
+        }
+      },
+      onError: (error) => {
+        toast.error(
+          error instanceof Error ? error.message : "Unable to delete folder.",
+        );
+      },
+    });
+  };
 
-    const isEmptyFolder =
-      folders.filter((folder) => folder.parentId === folderId).length === 0 &&
-      documents.filter((document) => document.folderId === folderId).length ===
-        0;
-
-    if (!isEmptyFolder) {
-      toast.error("Can only delete empty folders");
-      return;
-    }
-
-    setFolders((currentFolders) =>
-      currentFolders.filter((folder) => folder.id !== folderId),
+  const handleRenameDocument = (documentId: string, newName: string) => {
+    updateDocument(
+      { id: documentId, data: { title: newName } },
+      {
+        onSuccess: () => toast.success("Document renamed successfully"),
+        onError: (error) => {
+          toast.error(
+            error instanceof Error ? error.message : "Unable to rename document.",
+          );
+        },
+      },
     );
-
-    if (folderId === pendingFolderId) {
-      setPendingFolderId(null);
-    }
-
-    toast.success(`Folder "${folderToDelete.name}" deleted successfully`);
   };
 
   const handleDeleteDocument = (documentId: string) => {
-    const documentToDelete = documents.find(
-      (document) => document.id === documentId,
-    );
-    if (!documentToDelete || documentToDelete.uploadedBy !== currentUserName) {
-      toast.error("You can only delete your own documents");
+    deleteDocument(documentId, {
+      onSuccess: () => toast.success("Document deleted successfully"),
+      onError: (error) => {
+        toast.error(
+          error instanceof Error ? error.message : "Unable to delete document.",
+        );
+      },
+    });
+  };
+
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  const handleViewDocument = (documentId: string) => {
+    const document = documents.find((item) => item.id === documentId);
+
+    if (!document?.fileUrl) {
+      toast.error("This document cannot be opened right now.");
       return;
     }
 
-    setDocuments((currentDocuments) =>
-      currentDocuments.filter((document) => document.id !== documentId),
-    );
-    toast.success(
-      `Document "${documentToDelete.fileName}" deleted successfully`,
-    );
+    window.open(document.fileUrl, "_blank", "noopener,noreferrer");
   };
 
-  const hasContent =
-    folderContents.folders.length > 0 || folderContents.documents.length > 0;
+  const handleDownloadDocument = (documentId: string) => {
+    const document = documents.find((item) => item.id === documentId);
+
+    if (!document?.fileUrl) {
+      toast.error("This document cannot be downloaded right now.");
+      return;
+    }
+
+    const link = window.document.createElement("a");
+    link.href = document.fileUrl;
+    link.download = document.fileName;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.click();
+  };
+
+  const handleOpenDocumentDetails = (documentId: string) => {
+    const document = documents.find((item) => item.id === documentId);
+
+    if (!document) {
+      toast.error("Document details are not available.");
+      return;
+    }
+
+    const documentWithFolder = {
+      ...document,
+      folder:
+        document.folder ||
+        (currentFolderId
+          ? { id: currentFolderId, name: currentFolderName }
+          : undefined),
+    };
+
+    setSelectedDocument(documentWithFolder);
+    setIsDetailsOpen(true);
+  };
+
+  const handleCloseDocumentDetails = () => {
+    setIsDetailsOpen(false);
+  };
+
+  const handleOpenSelectedDocument = () => {
+    if (!selectedDocument?.fileUrl) {
+      return;
+    }
+
+    window.open(selectedDocument.fileUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleDownloadSelectedDocument = () => {
+    if (!selectedDocument?.fileUrl) {
+      toast.error("This document cannot be downloaded right now.");
+      return;
+    }
+
+    const link = window.document.createElement("a");
+    link.href = selectedDocument.fileUrl;
+    link.download = selectedDocument.fileName;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.click();
+  };
+
+  const itemCountLabel = `${visibleFolders.length + documents.length} ${
+    visibleFolders.length + documents.length === 1 ? "item" : "items"
+  }`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
-        <p className="text-sm text-secondary">{description}</p>
+        <h1 className="text-3xl font-semibold text-foreground">{title}</h1>
+        <p className="max-w-3xl text-sm text-secondary">{description}</p>
       </header>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex-1">
-          <Breadcrumb
-            path={breadcrumbPath}
-            onNavigate={handleNavigateToFolder}
-          />
-        </div>
+      <section className="border border-default bg-surface">
+        <div className="border-b border-default bg-[linear-gradient(180deg,rgba(248,250,252,0.98)_0%,rgba(255,255,255,0.98)_100%)] px-5 py-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-default bg-[var(--color-bg-secondary)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-secondary">
+                <FolderSearch className="h-3.5 w-3.5" />
+                File Explorer
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-xl font-semibold text-foreground">{currentFolderName}</h2>
+                <p className="text-sm text-secondary">
+                  {isInFolder
+                    ? "Manage files inside this folder with inline rename and quick actions."
+                    : "Browse company folders in a desktop-style details view."}
+                </p>
+              </div>
+            </div>
 
-        <div className="flex gap-2">
-          {!isFoldersRootPage && (
-            <>
+            <div className="flex flex-col gap-2 sm:flex-row">
               <button
+                type="button"
+                onClick={() => handleUploadDocument()}
+                className="inline-flex items-center justify-center gap-2 border border-default bg-surface px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+              >
+                <UploadIcon className="h-4 w-4" />
+                Upload file
+              </button>
+              <button
+                type="button"
                 onClick={handleStartNewFolder}
-                className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-opacity-90"
+                className="inline-flex items-center justify-center gap-2 bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:bg-primary-hover"
               >
                 <Plus className="h-4 w-4" />
-                New Folder
+                New folder
               </button>
-            </>
-          )}
+            </div>
+          </div>
         </div>
-      </div>
 
-      {hasContent ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {folderContents.folders.map((folder) => (
-            <FolderCard
-              key={folder.id}
-              folder={folder}
-              onOpen={handleNavigateToFolder}
-              onRename={handleRenameFolder}
-              onRenameComplete={handleRenameComplete}
-              onDelete={handleDeleteFolder}
-              isOwner={folder.createdBy === currentUserName}
-              startInRenameMode={folder.id === pendingFolderId}
-            />
-          ))}
-
-          {folderContents.documents.map((document) => (
-            <DocumentCard
-              key={document.id}
-              document={document}
-              onDelete={handleDeleteDocument}
-              isOwner={document.uploadedBy === currentUserName}
-            />
-          ))}
+        <div className="border-b border-default bg-[var(--color-bg-secondary)] px-5 py-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0 overflow-hidden border border-default bg-surface px-3 py-2">
+              <Breadcrumb path={breadcrumbPath} onNavigate={handleNavigateToFolder} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-secondary">
+              <span className="border border-default bg-surface px-3 py-1.5">
+                {itemCountLabel}
+              </span>
+              <span className="border border-default bg-surface px-3 py-1.5">
+                {isInFolder ? "Destination ready for uploads" : "Top-level workspace"}
+              </span>
+            </div>
+          </div>
         </div>
-      ) : (
-        <EmptyState
-          title={`No ${scope === "company" ? "folders or documents" : "personal folders or documents"}`}
-          description={
-            currentFolderId === rootId
-              ? scope === "company"
-                ? "This company workspace has no folders or documents yet."
-                : "Your personal workspace is empty. Create a folder or upload a document you own."
-              : "This folder is empty. Create a new folder or upload documents."
-          }
-          actionLabel="Create Folder"
-          onAction={handleStartNewFolder}
-        />
-      )}
+
+        {isLoading ? (
+          <div className="space-y-3 p-4">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <LoadingSkeleton key={index} height={64} rounded="1rem" />
+            ))}
+          </div>
+        ) : isError ? (
+          <div className="p-6">
+            <EmptyState
+              title="Unable to load folders"
+              description="Please refresh the page or try again later."
+              actionLabel="Reload"
+              onAction={() => window.location.reload()}
+            />
+          </div>
+        ) : hasContent ? (
+          <div className="overflow-x-auto overflow-y-visible">
+            <div className="min-w-[1080px]">
+              <div className="px-4 py-4">
+                <SortBar sortBy={sortBy} onChange={setSortBy} />
+              </div>
+
+              <div className="grid grid-cols-[minmax(320px,1.8fr)_180px_180px_160px_184px] gap-4 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-secondary">
+                <span>Name</span>
+                <span>Date modified</span>
+                <span>Type</span>
+                <span>{documents.length > 0 ? "Category" : "Items"}</span>
+                <span className="text-right">Actions</span>
+              </div>
+
+              {sortedFolders.map((folder) => (
+                <FolderCard
+                  key={folder.id}
+                  folder={folder}
+                  onOpen={handleOpenFolder}
+                  onRename={handleRenameFolder}
+                  onRenameComplete={handleRenameComplete}
+                  onDelete={handleDeleteFolder}
+                  onUpload={handleUploadDocument}
+                  isOwner={isAdmin || folder.createdBy?.id === currentUser.id}
+                  startInRenameMode={folder.id === pendingFolderId}
+                />
+              ))}
+
+              {sortedDocuments.map((document) => (
+                <DocumentCard
+                  key={document.id}
+                  document={{
+                    ...document,
+                    category:
+                      typeof document.category === "string"
+                        ? document.category
+                        : document.category?.name,
+                  }}
+                  onDelete={handleDeleteDocument}
+                  onView={handleViewDocument}
+                  onDetails={handleOpenDocumentDetails}
+                  onDownload={handleDownloadDocument}
+                  onRename={handleRenameDocument}
+                  isOwner={isAdmin || document.uploadedBy === currentUser.name}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="p-6">
+            <EmptyState
+              title={isInFolder ? "This folder is empty" : "No folders or files yet"}
+              description={
+                isInFolder
+                  ? "Create a subfolder or upload documents directly here."
+                  : "Start with a folder, then users can drop files into the right place."
+              }
+              actionLabel={isInFolder ? "Upload Files" : "Create Folder"}
+              actionIcon={isInFolder ? UploadIcon : FolderPlus}
+              onAction={isInFolder ? () => handleUploadDocument() : handleStartNewFolder}
+            />
+          </div>
+        )}
+      </section>
+
+      <DocumentDetails
+        document={selectedDocument}
+        isOpen={isDetailsOpen}
+        onClose={handleCloseDocumentDetails}
+        onOpen={handleOpenSelectedDocument}
+        onDownload={handleDownloadSelectedDocument}
+      />
     </div>
   );
 }
