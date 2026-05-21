@@ -2,18 +2,19 @@ import { Role } from "./enum";
 import { OrganizationType } from "./enum";
 
 export interface User {
-     id: string
-     name: string
-     email: string
-     role: Role
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
 }
 
 export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: Role;
   organizationId: string;
+  departmentId?: string | null;
   organizationName?: string | null;
   organizationLogo?: string | null;
 }

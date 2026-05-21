@@ -40,7 +40,7 @@ export function useGetInvitationDetails(token: string) {
 export function useInviteMember() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (data: InviteMemberInput) => invitationApi.inviteMember(data.email),
+    mutationFn: (data: InviteMemberInput) => invitationApi.inviteMember(data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["invitations"] });
     },

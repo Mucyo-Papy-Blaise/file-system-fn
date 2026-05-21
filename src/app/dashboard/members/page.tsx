@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { useAuth } from "@/lib/auth-context";
 import { useGetInvitations } from "@/lib/hooks/useInvitations";
+import { useGetDepartments } from "@/lib/hooks/useDepartments";
 import type { Member } from "@/types/member";
 import { InvitationStatus, Role } from "@/types/enum";
 import { toast } from "sonner";
@@ -25,17 +26,22 @@ export default function DashboardMembersPage() {
   const { invitations: acceptedInvitations, isLoading: isAcceptedInvitationsLoading } = useGetInvitations(
     InvitationStatus.ACCEPTED,
   );
+  const { departments } = useGetDepartments();
 
   const acceptedMembers = useMemo<Member[]>(
     () =>
-      acceptedInvitations.map((invitation) => ({
-        id: invitation.id,
-        name: invitation.email,
-        email: invitation.email,
-        role: invitation.role,
-        createdAt: new Date(invitation.createdAt).toLocaleDateString(),
-      })),
-    [acceptedInvitations],
+      acceptedInvitations.map((invitation) => {
+        const dept = departments.find((d) => d.id === invitation.departmentId);
+        return {
+          id: invitation.id,
+          name: invitation.email,
+          email: invitation.email,
+          role: invitation.role,
+          department: dept ? { id: dept.id, name: dept.name } : null,
+          createdAt: new Date(invitation.createdAt).toLocaleDateString(),
+        } as Member;
+      }),
+    [acceptedInvitations, departments],
   );
 
   const members = useMemo(

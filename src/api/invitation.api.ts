@@ -12,6 +12,7 @@ type InvitationApiRecord = {
   email: string;
   role: Invitation["role"];
   status: InvitationStatus;
+  departmentId?: string | null;
   createdAt: string;
   invitedBy: {
     name: string;
@@ -25,6 +26,7 @@ function normalizeInvitation(invitation: InvitationApiRecord): Invitation {
     email: invitation.email,
     role: invitation.role,
     status: invitation.status,
+    departmentId: invitation.departmentId ?? undefined,
     createdAt: invitation.createdAt,
     invitedBy: invitation.invitedBy,
   };
@@ -35,11 +37,11 @@ function buildInvitationsPath(status?: InvitationStatus): string {
 }
 
 export const invitationApi = {
-  async inviteMember(email: InviteMemberInput["email"]): Promise<Invitation> {
+  async inviteMember(data: InviteMemberInput): Promise<Invitation> {
     const response = await apiClient.post<
       ApiSuccessEnvelope<InvitationApiRecord>,
       InviteMemberInput
-    >("/invitations", { email });
+    >("/invitations", data);
 
     return normalizeInvitation(response.data);
   },

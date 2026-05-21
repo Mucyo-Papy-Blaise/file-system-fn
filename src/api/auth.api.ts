@@ -14,6 +14,7 @@ type MeResponse = ApiSuccessEnvelope<{
   email: string;
   role: string;
   organizationId: string;
+  departmentId?: string | null;
   organization?: {
     name?: string | null;
     logo?: string | null;
@@ -35,7 +36,8 @@ function normalizeAuthUser(response: MeResponse): AuthUser | null {
     id: rawUser.id,
     name: rawUser.name,
     email: rawUser.email,
-    role: rawUser.role,
+    role: rawUser.role as AuthUser["role"],
+    departmentId: rawUser.departmentId ?? null,
     organizationId: rawUser.organizationId,
     organizationName:
       "organization" in rawUser

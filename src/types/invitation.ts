@@ -5,6 +5,7 @@ export interface Invitation {
   email: string;
   role: Role;
   status: InvitationStatus;
+  departmentId?: string;
   createdAt: string;
   invitedBy: {
     name: string;

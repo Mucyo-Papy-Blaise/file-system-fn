@@ -2,6 +2,7 @@ export * from "./api-client";
 export * from "./auth.api";
 export * from "./category.api";
 export * from "./collection.api";
+export * from "./department.api";
 export * from "./document.api";
 export * from "./folder.api";
 export * from "./invitation.api";

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Building2,
   FileText,
   Folder,
   FolderOpen,
@@ -40,21 +41,22 @@ const navItems: NavItem[] = [
   { href: "/dashboard/search", label: "Search", icon: Search },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   {
-    href: "/dashboard/folders",
-    label: "Folders",
-    icon: FolderOpen,
-    roles: [Role.ADMIN],
+    href: "/dashboard/departments",
+    label: "Departments",
+    icon: Building2,
+    roles: [Role.SUPER_ADMIN],
   },
+  { href: "/dashboard/folders", label: "Folders", icon: FolderOpen, roles: [Role.SUPER_ADMIN, Role.ADMIN] },
   { href: "/dashboard/my-folders", label: "My Folders", icon: Folder },
-  // { href: "/dashboard/inbox", label: "Inbox", icon: Inbox },
-  { href: "/dashboard/documents", label: "My Documents", icon: FileText },
-  { href: "/dashboard/categories", label: "Categories", icon: Tag },
+  { href: "/dashboard/categories", label: "Categories", icon: Tag, roles: [Role.SUPER_ADMIN, Role.ADMIN] },
+  { href: "/dashboard/documents", label: "Documents", icon: FileText },
   { href: "/dashboard/collections", label: "Collections", icon: LibraryBig },
+  { href: "/dashboard/inbox", label: "Inbox", icon: Inbox },
   {
     href: "/dashboard/members",
     label: "Members",
     icon: Users,
-    roles: [Role.ADMIN],
+    roles: [Role.SUPER_ADMIN, Role.ADMIN],
   },
 ];
 
@@ -72,12 +74,12 @@ export function Sidebar({ isOpen, pathname, user, onClose }: SidebarProps) {
   const router = useRouter();
   const { logout } = useAuth();
 
-  const role = user?.role === Role.ADMIN ? Role.ADMIN : Role.MEMBER;
+  const role = user?.role ?? Role.MEMBER;
   const { documents: inboxDocuments } = useGetInbox();
   const inboxCount = inboxDocuments.length;
 
   const visibleItems = navItems.filter(
-    (item) => !item.roles || item.roles.includes(role),
+    (item) => !item.roles || (user && item.roles.includes(user.role)),
   );
 
   const handleLogout = async () => {

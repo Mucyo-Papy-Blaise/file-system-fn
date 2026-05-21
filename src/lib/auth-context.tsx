@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
 import { authApi } from "@/api/auth.api";
+import { Role } from "@/types/enum";
 import { ApiError, TOKEN_EVENT, tokenStorage } from "@/api/api-client";
 import type { AuthSuccessResponse, AuthUser, LoginPayload, RegisterPayload } from "@/types/auth";
 
@@ -10,6 +11,9 @@ interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isSuperAdmin: boolean;
+  isAdmin: boolean;
+  isMember: boolean;
   login: (payload: LoginPayload) => Promise<AuthSuccessResponse>;
   register: (payload: RegisterPayload) => Promise<AuthSuccessResponse>;
   logout: () => Promise<void>;
@@ -112,6 +116,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       isAuthenticated: hasToken || Boolean(user),
       isLoading,
+      isSuperAdmin: user?.role === Role.SUPER_ADMIN,
+      isAdmin: user?.role === Role.ADMIN,
+      isMember: user?.role === Role.MEMBER,
       login,
       register,
       logout,

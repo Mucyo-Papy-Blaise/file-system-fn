@@ -24,11 +24,11 @@ export function InviteMemberModal({ isOpen, onClose }: InviteMemberModalProps) {
     const parsed = inviteMemberSchema.safeParse({ email });
 
     if (!parsed.success) {
-      toast.error(parsed.error.flatten().fieldErrors.email?.[0] ?? "Enter a valid email address.");
+      toast.error("Invalid email address.");
       return;
     }
 
-      try {
+    try {
       await inviteMember.mutateAsync(parsed.data);
       toast.success("Invitation sent successfully");
       handleClose();

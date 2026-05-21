@@ -91,6 +91,7 @@ export function MembersTable({
               <th className="px-5 py-4 font-medium">Avatar</th>
               <th className="px-5 py-4 font-medium">Name</th>
               <th className="px-5 py-4 font-medium">Email</th>
+              <th className="px-5 py-4 font-medium">Department</th>
               <th className="px-5 py-4 font-medium">Role</th>
               <th className="px-5 py-4 font-medium">Date Joined</th>
               <th className="px-5 py-4 font-medium text-right">Actions</th>
@@ -99,7 +100,7 @@ export function MembersTable({
           <tbody>
             {members.length === 0 ? (
               <tr className="border-t border-default">
-                <td colSpan={6} className="px-5 py-8 text-center text-sm text-secondary">
+                <td colSpan={7} className="px-5 py-8 text-center text-sm text-secondary">
                   No members have accepted an invitation yet.
                 </td>
               </tr>
@@ -113,6 +114,7 @@ export function MembersTable({
                   </td>
                   <td className="px-5 py-4 text-foreground">{member.name}</td>
                   <td className="px-5 py-4 text-secondary">{member.email}</td>
+                  <td className="px-5 py-4 text-secondary">{member.department?.name ?? '—'}</td>
                   <td className="px-5 py-4">
                     <Badge label={member.role} variant={member.role === Role.ADMIN ? "admin" : "member"} />
                   </td>
@@ -126,7 +128,7 @@ export function MembersTable({
                       >
                         Change Role
                       </button> */}
-                      {currentUserRole === Role.ADMIN && (
+                      {currentUserRole === Role.ADMIN || currentUserRole === Role.SUPER_ADMIN && (
                         <button
                           type="button"
                           onClick={() => handleDeleteClick(member.id, member.name)}
