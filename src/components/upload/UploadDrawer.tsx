@@ -214,10 +214,6 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
 
   if (!isOpen) return null;
 
-  if (mode === "multiple") {
-    return <BulkUploadDrawer isOpen={isOpen} onClose={() => { handleModeChange("single"); onClose(); }} />;
-  }
-
   return (
     <>
       {/* Backdrop */}
@@ -228,7 +224,9 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
         {/* Header */}
         <div className="sticky top-0 flex items-center justify-between border-b border-default bg-surface px-6 py-4">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Upload Document</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              {mode === "multiple" ? "Bulk Upload Files" : "Upload Document"}
+            </h2>
             <div className="mt-2 flex items-center gap-2 rounded-2xl bg-[var(--color-bg-secondary)] p-1">
               <button
                 type="button"
@@ -254,20 +252,23 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
               </button>
             </div>
           </div>
-          {state === "IDLE" || state === "SUCCESS" ? (
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full p-2 hover:bg-[var(--color-bg-secondary)]"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 hover:bg-[var(--color-bg-secondary)]"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Content */}
         <div className="space-y-6 p-6">
+          {mode === "multiple" ? (
+            <BulkUploadDrawer embedded onClose={() => { handleModeChange("single"); onClose(); }} />
+          ) : null}
+
           {state === "IDLE" && (
+            mode === "single" ? (
             <div className="space-y-4">
               <p className="text-sm text-secondary">
                 Upload a PDF or image file. We&apos;ll extract the text and help you categorize it.
@@ -283,9 +284,11 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
                 </button>
               )}
             </div>
+            ) : null
           )}
 
           {state === "PROCESSING" && (
+            mode === "single" ? (
             <div>
               <p className="mb-6 text-sm text-secondary">
                 Please wait while we process your document...
@@ -295,9 +298,11 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
                 isComplete={state !== "PROCESSING" || currentStep > 2}
               />
             </div>
+            ) : null
           )}
 
           {state === "CONFIRM" && aiResult && (
+            mode === "single" ? (
             <div className="space-y-6">
               <div className="rounded-3xl border border-default bg-surface p-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -344,9 +349,11 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
                 />
               </div>
             </div>
+            ) : null
           )}
 
           {state === "SUCCESS" && (
+            mode === "single" ? (
             <div className="space-y-4 py-8 text-center">
               <div className="mx-auto h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
                 <svg
@@ -368,6 +375,7 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
                 Your document has been successfully uploaded and categorized.
               </p>
             </div>
+            ) : null
           )}
         </div>
       </div>

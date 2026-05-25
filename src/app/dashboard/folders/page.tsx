@@ -36,6 +36,7 @@ export default function FoldersPage() {
       title="Folders"
       description="Browse every folder and document uploaded across the company."
       currentUser={user}
+      onlyMine={false}
     />
   );
 }

@@ -43,6 +43,7 @@ type DocumentInCollectionApiRecord = {
   concerning?: string | null;
   purpose?: string | null;
   documentDate?: string | null;
+  processingStatus?: string | null;
   createdAt: string;
   updatedAt: string;
   category: CategoryApiRecord;
@@ -96,6 +97,7 @@ function normalizeCollection(collection: CollectionApiRecord): Collection {
       extractedText: doc.extractedText,
       title: doc.title,
       summary: doc.summary,
+      processingStatus: (doc.processingStatus ?? "").toLowerCase() as Document["processingStatus"],
       documentOwner: doc.documentOwner ?? null,
       author: doc.author ?? null,
       documentType: doc.documentType ?? null,

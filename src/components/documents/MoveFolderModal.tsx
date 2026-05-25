@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChevronRight, Folder } from "lucide-react";
+import { useState } from "react";
+import { ChevronRight, FolderArchive } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "@/components/ui/Modal";
 import { useGetRootFolders } from "@/lib/hooks/useFolders";
@@ -19,11 +19,10 @@ export function MoveFolderModal({ isOpen, onClose, documentId }: MoveFolderModal
   const { folders, isLoading } = useGetRootFolders();
   const moveToFolder = useMoveToFolder();
 
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedFolderId(null);
-    }
-  }, [isOpen]);
+  const handleClose = () => {
+    setSelectedFolderId(null);
+    onClose();
+  };
 
   const handleMove = async () => {
     if (!selectedFolderId) {
@@ -34,7 +33,7 @@ export function MoveFolderModal({ isOpen, onClose, documentId }: MoveFolderModal
     try {
       await moveToFolder.mutateAsync({ id: documentId, folderId: selectedFolderId });
       toast.success("Document moved successfully");
-      onClose();
+      handleClose();
     } catch (error) {
       console.error("Move document error:", error);
       toast.error("Failed to move document. Please try again.");
@@ -44,7 +43,7 @@ export function MoveFolderModal({ isOpen, onClose, documentId }: MoveFolderModal
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Move to Folder"
       variant="center"
     >
@@ -81,7 +80,7 @@ export function MoveFolderModal({ isOpen, onClose, documentId }: MoveFolderModal
                     ].join(" ")}
                   >
                     <span className="inline-flex items-center gap-2 text-sm font-medium">
-                      <Folder className="h-4 w-4" />
+                      <FolderArchive className="h-4 w-4" />
                       {folder.name}
                     </span>
                     <ChevronRight className="h-4 w-4" />
@@ -95,7 +94,7 @@ export function MoveFolderModal({ isOpen, onClose, documentId }: MoveFolderModal
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-2xl border border-default bg-background px-4 py-3 text-sm font-semibold text-secondary transition hover:bg-[var(--color-bg-secondary)]"
           >
             Cancel

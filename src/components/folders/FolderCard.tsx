@@ -26,6 +26,10 @@ interface FolderCardProps {
       id: string;
       name: string;
     };
+    department?: {
+      id: string;
+      name: string;
+    } | null;
   };
   onOpen: (folderId: string) => void;
   onRename?: (folderId: string, newName: string) => void;
@@ -34,6 +38,7 @@ interface FolderCardProps {
   onUpload?: (folderId: string) => void;
   isOwner?: boolean;
   startInRenameMode?: boolean;
+  showDepartmentColumn?: boolean;
 }
 
 function formatFolderItems(itemCount?: number) {
@@ -55,6 +60,7 @@ export function FolderCard({
   onUpload,
   isOwner = false,
   startInRenameMode = false,
+  showDepartmentColumn = false,
 }: FolderCardProps) {
   const [isRenaming, setIsRenaming] = useState(startInRenameMode);
   const [newName, setNewName] = useState(folder.name);
@@ -88,11 +94,15 @@ export function FolderCard({
     onUpload?.(folder.id);
   };
 
+  const folderGridColumns = showDepartmentColumn
+    ? "grid-cols-[minmax(320px,1.8fr)_160px_160px_180px_minmax(140px,1fr)_132px]"
+    : "grid-cols-[minmax(320px,1.8fr)_160px_160px_minmax(140px,1fr)_132px]";
+
   return (
     <>
       <div
         onClick={() => !isRenaming && onOpen(folder.id)}
-        className="group grid cursor-pointer grid-cols-[minmax(320px,1.8fr)_180px_180px_160px_184px] items-center gap-4 border-t border-default px-4 py-3 text-sm transition-colors hover:bg-[var(--color-bg-secondary)]"
+        className={`group grid cursor-pointer ${folderGridColumns} items-center gap-4 border-t border-default px-4 py-3 text-sm transition-colors hover:bg-[var(--color-bg-secondary)]`}
       >
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-[#fff5d6]">
@@ -141,7 +151,12 @@ export function FolderCard({
               })
             : "Just now"}
         </p>
-        <p className="truncate text-secondary">File folder</p>
+        <p className="truncate text-secondary">Folder</p>
+        {showDepartmentColumn ? (
+          <p className="truncate text-secondary">
+            {folder.department?.name ?? "Unassigned"}
+          </p>
+        ) : null}
         <p className="truncate text-secondary">{formatFolderItems(folder.itemCount)}</p>
 
         <div className="relative flex items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
@@ -149,17 +164,17 @@ export function FolderCard({
             <button
               type="button"
               onClick={handleUploadClick}
-              className="inline-flex items-center gap-2 border border-default bg-surface px-3 py-2 text-xs font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+              className="inline-flex h-9 items-center gap-2 border border-default bg-surface px-3 text-xs font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
             >
               <Upload className="h-3.5 w-3.5" />
-              Upload
+              Add
             </button>
           ) : null}
 
           {isOwner ? (
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="shrink-0 p-2 text-secondary transition hover:bg-[var(--color-bg-tertiary)] hover:text-foreground"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center border border-default text-secondary transition hover:bg-[var(--color-bg-tertiary)] hover:text-foreground"
                 ariaLabel={`Folder actions for ${folder.name}`}
               >
                 <MoreHorizontal className="h-4 w-4" />

@@ -4,10 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { folderApi } from "@/api/folder.api";
 import type { CreateFolderInput, FolderContents, Folder, UpdateFolderInput } from "@/types/folder";
 
-export function useGetRootFolders() {
+export function useGetRootFolders(options?: { mine?: boolean }) {
   const query = useQuery({
-    queryKey: ["folders"],
-    queryFn: () => folderApi.getRootFolders(),
+    queryKey: ["folders", options?.mine ?? false],
+    queryFn: () => folderApi.getRootFolders(options),
   });
 
   return {
@@ -17,10 +17,10 @@ export function useGetRootFolders() {
   };
 }
 
-export function useGetFolderContents(id: string | null) {
+export function useGetFolderContents(id: string | null, options?: { mine?: boolean }) {
   const query = useQuery({
-    queryKey: ["folders", id],
-    queryFn: () => folderApi.getFolderContents(id ?? ""),
+    queryKey: ["folders", id, options?.mine ?? false],
+    queryFn: () => folderApi.getFolderContents(id ?? "", options),
     enabled: Boolean(id),
   });
 

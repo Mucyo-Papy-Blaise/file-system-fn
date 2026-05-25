@@ -1,12 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FolderPlus, FolderSearch, Plus, Upload as UploadIcon } from "lucide-react";
+import {
+  FolderPlus,
+  FolderSearch,
+  Plus,
+  Upload as UploadIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Breadcrumb } from "@/components/folders/Breadcrumb";
 import { DocumentCard } from "@/components/folders/DocumentCard";
 import { FolderCard } from "@/components/folders/FolderCard";
 import { DocumentDetails } from "@/components/documents/DocumentDetails";
+import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { SortBar } from "@/components/ui/SortBar";
@@ -27,14 +33,37 @@ interface FolderWorkspaceProps {
   title: string;
   description: string;
   currentUser: AuthUser;
+  onlyMine?: boolean;
 }
 
 const NEW_FOLDER_ID = "pending-new-folder";
+
+function getFileType(fileName: string) {
+  const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
+
+  switch (extension) {
+    case "png":
+    case "jpg":
+    case "jpeg":
+    case "gif":
+    case "webp":
+      return `image/${extension === "jpg" ? "jpeg" : extension}`;
+    case "pdf":
+      return "application/pdf";
+    case "xls":
+    case "xlsx":
+    case "csv":
+      return "application/vnd.ms-excel";
+    default:
+      return "application/octet-stream";
+  }
+}
 
 export function FolderWorkspace({
   title,
   description,
   currentUser,
+  onlyMine = false,
 }: FolderWorkspaceProps) {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [pendingFolderId, setPendingFolderId] = useState<string | null>(null);
@@ -45,12 +74,12 @@ export function FolderWorkspace({
     folders: rootFolders,
     isLoading: isRootLoading,
     isError: isRootError,
-  } = useGetRootFolders();
+  } = useGetRootFolders({ mine: onlyMine });
   const {
     folderContents,
     isLoading: isContentsLoading,
     isError: isContentsError,
-  } = useGetFolderContents(currentFolderId);
+  } = useGetFolderContents(currentFolderId, { mine: onlyMine });
 
   const { mutate: createFolder } = useCreateFolder();
   const { mutate: updateFolder } = useUpdateFolder();
@@ -61,7 +90,9 @@ export function FolderWorkspace({
   const isLoading = currentFolderId ? isContentsLoading : isRootLoading;
   const isError = currentFolderId ? isContentsError : isRootError;
   const isAdmin = currentUser.role === Role.ADMIN;
+  const showDepartmentColumn = currentUser.role === Role.SUPER_ADMIN;
   const isInFolder = currentFolderId !== null;
+  const showActions = onlyMine;
 
   const breadcrumbPath = useMemo(() => {
     const rootItem = { id: "root", name: title };
@@ -73,25 +104,39 @@ export function FolderWorkspace({
     return [rootItem, ...(folderContents?.breadcrumb ?? [])];
   }, [currentFolderId, folderContents?.breadcrumb, title]);
 
-  const currentFolderName = breadcrumbPath[breadcrumbPath.length - 1]?.name ?? title;
-  const folders = currentFolderId ? folderContents?.children ?? [] : rootFolders;
-  const documents = currentFolderId ? folderContents?.documents ?? [] : [];
+  const currentFolderName =
+    breadcrumbPath[breadcrumbPath.length - 1]?.name ?? title;
+  const folders = useMemo(
+    () => currentFolderId ? (folderContents?.children ?? []) : rootFolders,
+    [currentFolderId, folderContents?.children, rootFolders],
+  );
+  const documents = useMemo(
+    () => (currentFolderId ? (folderContents?.documents ?? []) : []),
+    [currentFolderId, folderContents?.documents],
+  );
 
-  const placeholderFolder = pendingFolderId
-    ? {
-        id: NEW_FOLDER_ID,
-        name: "New Folder",
-        slug: "new-folder",
-        parentId: currentFolderId,
-        organizationId: currentUser.organizationId,
-        itemCount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: { id: currentUser.id, name: currentUser.name },
-      }
-    : null;
+  const placeholderFolder = useMemo(
+    () =>
+      pendingFolderId
+        ? {
+            id: NEW_FOLDER_ID,
+            name: "New Folder",
+            slug: "new-folder",
+            parentId: currentFolderId,
+            organizationId: currentUser.organizationId,
+            itemCount: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            createdBy: { id: currentUser.id, name: currentUser.name },
+          }
+        : null,
+    [pendingFolderId, currentFolderId, currentUser.organizationId, currentUser.id, currentUser.name],
+  );
 
-  const visibleFolders = placeholderFolder ? [placeholderFolder, ...folders] : folders;
+  const visibleFolders = useMemo(
+    () => (placeholderFolder ? [placeholderFolder, ...folders] : folders),
+    [placeholderFolder, folders],
+  );
   const sortedFolders = useMemo(() => {
     const items = [...visibleFolders];
 
@@ -128,7 +173,8 @@ export function FolderWorkspace({
 
     items.sort(
       (left, right) =>
-        new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+        new Date(left.createdAt).getTime() -
+        new Date(right.createdAt).getTime(),
     );
 
     if (sortBy === "date_desc") {
@@ -231,7 +277,9 @@ export function FolderWorkspace({
         onSuccess: () => toast.success("Document renamed successfully"),
         onError: (error) => {
           toast.error(
-            error instanceof Error ? error.message : "Unable to rename document.",
+            error instanceof Error
+              ? error.message
+              : "Unable to rename document.",
           );
         },
       },
@@ -249,8 +297,21 @@ export function FolderWorkspace({
     });
   };
 
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [selectedDocument, setSelectedDocument] = useState<{
+    id?: string | null;
+    fileName?: string | null;
+    fileUrl?: string | null;
+    title?: string | null;
+    category?: string | { id: string; name: string } | null;
+    folder?: string | { id: string; name: string } | null;
+    uploadedBy?: string | { id: string; name: string } | null;
+    createdAt?: string | null;
+  } | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<{
+    fileName?: string | null;
+    fileUrl?: string | null;
+  } | null>(null);
 
   const handleViewDocument = (documentId: string) => {
     const document = documents.find((item) => item.id === documentId);
@@ -260,7 +321,8 @@ export function FolderWorkspace({
       return;
     }
 
-    window.open(document.fileUrl, "_blank", "noopener,noreferrer");
+    setIsDetailsOpen(false);
+    setPreviewDocument(document);
   };
 
   const handleDownloadDocument = (documentId: string) => {
@@ -309,7 +371,8 @@ export function FolderWorkspace({
       return;
     }
 
-    window.open(selectedDocument.fileUrl, "_blank", "noopener,noreferrer");
+    setIsDetailsOpen(false);
+    setPreviewDocument(selectedDocument);
   };
 
   const handleDownloadSelectedDocument = () => {
@@ -320,7 +383,7 @@ export function FolderWorkspace({
 
     const link = window.document.createElement("a");
     link.href = selectedDocument.fileUrl;
-    link.download = selectedDocument.fileName;
+    link.download = selectedDocument.fileName ?? 'document.pdf';
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     link.click();
@@ -329,6 +392,10 @@ export function FolderWorkspace({
   const itemCountLabel = `${visibleFolders.length + documents.length} ${
     visibleFolders.length + documents.length === 1 ? "item" : "items"
   }`;
+
+  const tableGridColumns = showDepartmentColumn
+    ? "grid-cols-[minmax(320px,1.8fr)_160px_160px_180px_minmax(140px,1fr)_132px]"
+    : "grid-cols-[minmax(320px,1.8fr)_160px_160px_minmax(140px,1fr)_132px]";
 
   return (
     <div className="space-y-5">
@@ -346,7 +413,9 @@ export function FolderWorkspace({
                 File Explorer
               </div>
               <div className="space-y-1">
-                <h2 className="text-xl font-semibold text-foreground">{currentFolderName}</h2>
+                <h2 className="text-xl font-semibold text-foreground">
+                  {currentFolderName}
+                </h2>
                 <p className="text-sm text-secondary">
                   {isInFolder
                     ? "Manage files inside this folder with inline rename and quick actions."
@@ -355,38 +424,45 @@ export function FolderWorkspace({
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => handleUploadDocument()}
-                className="inline-flex items-center justify-center gap-2 border border-default bg-surface px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
-              >
-                <UploadIcon className="h-4 w-4" />
-                Upload file
-              </button>
-              <button
-                type="button"
-                onClick={handleStartNewFolder}
-                className="inline-flex items-center justify-center gap-2 bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:bg-primary-hover"
-              >
-                <Plus className="h-4 w-4" />
-                New folder
-              </button>
-            </div>
+            {showActions ? (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => handleUploadDocument()}
+                  className="inline-flex items-center justify-center gap-2 border border-default bg-surface px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+                >
+                  <UploadIcon className="h-4 w-4" />
+                  Upload file
+                </button>
+                <button
+                  type="button"
+                  onClick={handleStartNewFolder}
+                  className="inline-flex items-center justify-center gap-2 bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:bg-primary-hover"
+                >
+                  <Plus className="h-4 w-4" />
+                  New folder
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
 
         <div className="border-b border-default bg-[var(--color-bg-secondary)] px-5 py-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0 overflow-hidden border border-default bg-surface px-3 py-2">
-              <Breadcrumb path={breadcrumbPath} onNavigate={handleNavigateToFolder} />
+              <Breadcrumb
+                path={breadcrumbPath}
+                onNavigate={handleNavigateToFolder}
+              />
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs text-secondary">
               <span className="border border-default bg-surface px-3 py-1.5">
                 {itemCountLabel}
               </span>
               <span className="border border-default bg-surface px-3 py-1.5">
-                {isInFolder ? "Destination ready for uploads" : "Top-level workspace"}
+                {isInFolder
+                  ? "Destination ready for uploads"
+                  : "Top-level workspace"}
               </span>
             </div>
           </div>
@@ -414,11 +490,14 @@ export function FolderWorkspace({
                 <SortBar sortBy={sortBy} onChange={setSortBy} />
               </div>
 
-              <div className="grid grid-cols-[minmax(320px,1.8fr)_180px_180px_160px_184px] gap-4 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-secondary">
+              <div
+                className={`grid ${tableGridColumns} gap-4 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-secondary`}
+              >
                 <span>Name</span>
                 <span>Date modified</span>
                 <span>Type</span>
-                <span>{documents.length > 0 ? "Category" : "Items"}</span>
+                {showDepartmentColumn ? <span>Department</span> : null}
+                <span>Details</span>
                 <span className="text-right">Actions</span>
               </div>
 
@@ -430,9 +509,10 @@ export function FolderWorkspace({
                   onRename={handleRenameFolder}
                   onRenameComplete={handleRenameComplete}
                   onDelete={handleDeleteFolder}
-                  onUpload={handleUploadDocument}
+                  onUpload={showActions ? handleUploadDocument : undefined}
                   isOwner={isAdmin || folder.createdBy?.id === currentUser.id}
                   startInRenameMode={folder.id === pendingFolderId}
+                  showDepartmentColumn={showDepartmentColumn}
                 />
               ))}
 
@@ -452,23 +532,35 @@ export function FolderWorkspace({
                   onDownload={handleDownloadDocument}
                   onRename={handleRenameDocument}
                   isOwner={isAdmin || document.uploadedBy === currentUser.name}
+                  showDepartmentColumn={showDepartmentColumn}
                 />
               ))}
             </div>
           </div>
         ) : (
           <div className="p-6">
-            <EmptyState
-              title={isInFolder ? "This folder is empty" : "No folders or files yet"}
-              description={
-                isInFolder
-                  ? "Create a subfolder or upload documents directly here."
-                  : "Start with a folder, then users can drop files into the right place."
-              }
-              actionLabel={isInFolder ? "Upload Files" : "Create Folder"}
-              actionIcon={isInFolder ? UploadIcon : FolderPlus}
-              onAction={isInFolder ? () => handleUploadDocument() : handleStartNewFolder}
-            />
+            {showActions ? (
+              <EmptyState
+                title={
+                  isInFolder ? "This folder is empty" : "No folders or files yet"
+                }
+                description={
+                  isInFolder
+                    ? "Create a subfolder or upload documents directly here."
+                    : "Start with a folder, then users can drop files into the right place."
+                }
+                actionLabel={isInFolder ? "Upload Files" : "Create Folder"}
+                actionIcon={isInFolder ? UploadIcon : FolderPlus}
+                onAction={
+                  isInFolder ? () => handleUploadDocument() : handleStartNewFolder
+                }
+              />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-default bg-[var(--color-bg-secondary)] p-12 text-center text-sm text-secondary">
+                <h2 className="text-lg font-semibold text-foreground">No folders or files</h2>
+                <p className="mt-2">There are no folders or files to display.</p>
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -479,6 +571,14 @@ export function FolderWorkspace({
         onClose={handleCloseDocumentDetails}
         onOpen={handleOpenSelectedDocument}
         onDownload={handleDownloadSelectedDocument}
+      />
+
+      <DocumentPreview
+        isOpen={Boolean(previewDocument?.fileUrl)}
+        onClose={() => setPreviewDocument(null)}
+        fileUrl={previewDocument?.fileUrl ?? ""}
+        fileName={previewDocument?.fileName ?? ""}
+        fileType={previewDocument?.fileName ? getFileType(previewDocument.fileName) : "application/octet-stream"}
       />
     </div>
   );

@@ -3,6 +3,7 @@ export interface Document {
   fileName: string;
   fileUrl: string;
   extractedText: string;
+  processingStatus: 'processing' | 'ready' | 'confirmed';
   title: string;
   summary: string;
   documentOwner?: string | null;
@@ -26,6 +27,19 @@ export interface Document {
     name: string;
   };
   organizationId: string;
+}
+
+export interface ConfirmDocumentData {
+  title?: string | null;
+  documentOwner?: string | null;
+  author?: string | null;
+  documentType?: string | null;
+  concerning?: string | null;
+  purpose?: string | null;
+  documentDate?: string | null;
+  summary?: string | null;
+  categoryId?: string | null;
+  folderId?: string | null;
 }
 
 export type SortOption =

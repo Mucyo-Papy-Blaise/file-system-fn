@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Building2,
   FileText,
@@ -10,18 +9,16 @@ import {
   Inbox,
   LayoutDashboard,
   LibraryBig,
-  LogOut,
   Search,
   Tag,
   Users,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { toast } from "sonner";
 import { useGetInbox } from "@/lib/hooks/useDocuments";
+import type { Document } from "@/types/document";
 import { Role } from "@/types/enum";
 import type { AuthUser } from "@/types/auth";
-import { useAuth } from "@/lib/auth-context";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -46,9 +43,19 @@ const navItems: NavItem[] = [
     icon: Building2,
     roles: [Role.SUPER_ADMIN],
   },
-  { href: "/dashboard/folders", label: "Folders", icon: FolderOpen, roles: [Role.SUPER_ADMIN, Role.ADMIN] },
+  {
+    href: "/dashboard/folders",
+    label: "Folders",
+    icon: FolderOpen,
+    roles: [Role.SUPER_ADMIN, Role.ADMIN],
+  },
   { href: "/dashboard/my-folders", label: "My Folders", icon: Folder },
-  { href: "/dashboard/categories", label: "Categories", icon: Tag, roles: [Role.SUPER_ADMIN, Role.ADMIN] },
+  {
+    href: "/dashboard/categories",
+    label: "Categories",
+    icon: Tag,
+    roles: [Role.SUPER_ADMIN, Role.ADMIN],
+  },
   { href: "/dashboard/documents", label: "Documents", icon: FileText },
   { href: "/dashboard/collections", label: "Collections", icon: LibraryBig },
   { href: "/dashboard/inbox", label: "Inbox", icon: Inbox },
@@ -71,27 +78,23 @@ function getInitials(name?: string | null) {
 }
 
 export function Sidebar({ isOpen, pathname, user, onClose }: SidebarProps) {
-  const router = useRouter();
-  const { logout } = useAuth();
-
   const role = user?.role ?? Role.MEMBER;
   const { documents: inboxDocuments } = useGetInbox();
-  const inboxCount = inboxDocuments.length;
+  const safeInboxDocuments: Document[] = Array.isArray(inboxDocuments) ? inboxDocuments : [];
+  const processingCount = safeInboxDocuments.filter(
+    (d) => d.processingStatus === "processing",
+  ).length;
+  const readyCount = safeInboxDocuments.filter(
+    (d) => d.processingStatus === "ready",
+  ).length;
+  const confirmedCount = safeInboxDocuments.filter(
+    (d) => d.processingStatus === "confirmed",
+  ).length;
+  const inboxCount = processingCount + readyCount;
 
   const visibleItems = navItems.filter(
     (item) => !item.roles || (user && item.roles.includes(user.role)),
   );
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      toast.success("Logged out successfully");
-      router.replace("/login");
-    } catch (error) {
-      toast.error("Failed to logout");
-      console.error("Logout error:", error);
-    }
-  };
 
   return (
     <>
@@ -138,11 +141,12 @@ export function Sidebar({ isOpen, pathname, user, onClose }: SidebarProps) {
           </button>
         </div>
 
-        <nav className="flex-1 space-y-2 px-5 py-6">
+        <nav className="flex-1 overflow-y-auto pr-2 space-y-2 px-5 py-6">
           {visibleItems.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
+              (item.href !== "/dashboard" &&
+                pathname.startsWith(`${item.href}/`));
             const Icon = item.icon;
 
             return (
@@ -160,7 +164,9 @@ export function Sidebar({ isOpen, pathname, user, onClose }: SidebarProps) {
                 <Icon className="h-4 w-4 shrink-0" />
                 <span>{item.label}</span>
                 {item.href === "/dashboard/inbox" && inboxCount > 0 ? (
-                  <span className="ml-auto rounded-full bg-red-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
+                  <span
+                    className={`ml-auto rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${processingCount > 0 ? "bg-yellow-400 text-black" : "bg-blue-600 text-white"}`}
+                  >
                     {inboxCount}
                   </span>
                 ) : null}
@@ -170,7 +176,7 @@ export function Sidebar({ isOpen, pathname, user, onClose }: SidebarProps) {
         </nav>
 
         <div className="border-t border-default px-4 py-5">
-          <div className="flex items-start gap-3 rounded-3xl bg-[var(--color-bg-secondary)] p-4 shadow-sm ring-1 ring-[var(--color-border)]/80">
+          <div className="flex items-center gap-3 rounded-3xl bg-[var(--color-bg-secondary)] p-4 shadow-sm ring-1 ring-[var(--color-border)]/80">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-subtle)] text-sm font-semibold text-primary">
               {getInitials(user?.name)}
             </div>
@@ -178,24 +184,14 @@ export function Sidebar({ isOpen, pathname, user, onClose }: SidebarProps) {
               <p className="truncate text-sm font-semibold text-foreground">
                 {user?.name ?? "Unknown User"}
               </p>
-              <div className="mt-1 flex items-center gap-2">
-                <span className="rounded-full bg-[var(--color-primary-subtle)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
-                  {role}
-                </span>
-              </div>
-              <p className="mt-2 truncate text-xs text-muted">
+              <p className="mt-1 truncate text-xs text-muted">
                 {user?.organizationName ?? "No organization"}
               </p>
             </div>
+            <span className="ml-auto rounded-full bg-[var(--color-bg-secondary)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+              {role}
+            </span>
           </div>
-
-          <button
-            onClick={handleLogout}
-            className="mt-3 flex w-full items-center gap-3 rounded-3xl px-4 py-3 text-sm font-medium text-secondary transition-all duration-200 hover:bg-[var(--color-bg-secondary)] hover:text-foreground"
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            <span>Logout</span>
-          </button>
         </div>
       </aside>
     </>

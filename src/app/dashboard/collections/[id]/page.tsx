@@ -181,8 +181,8 @@ export default function CollectionDetailPage() {
         <div className="space-y-4">
           <SortBar sortBy={sortBy} onChange={setSortBy} />
 
-          <div className="overflow-x-auto rounded-3xl border border-default bg-surface">
-            <div className="grid gap-4 border-b border-default px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-secondary md:grid-cols-[2.5fr_1fr_1fr_1fr_auto]">
+          <div className="overflow-x-auto rounded border border-default bg-surface">
+            <div className="grid gap-4 border-b border-default px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-secondary md:grid-cols-[minmax(320px,1.8fr)_160px_160px_minmax(140px,1fr)_132px]">
               <span>Name</span>
               <span>Owner</span>
               <span>Last changes</span>

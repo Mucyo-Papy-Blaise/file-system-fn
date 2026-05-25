@@ -2,12 +2,17 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { documentApi } from "@/api/document.api";
+import { toast } from "sonner";
+import { useEffect, useRef } from "react";
 import type {
   CreateDocumentInput,
+  Document,
   DocumentFilters,
+  DocumentListResponse,
   MoveDocumentInput,
   RenameDocumentInput,
   UpdateDocumentInput,
+  ConfirmDocumentData,
 } from "@/types/document";
 
 export function useProcessDocument() {
@@ -27,7 +32,7 @@ export function useProcessDocument() {
 }
 
 export function useGetDocuments(filters?: DocumentFilters) {
-  const query = useQuery({
+  const query = useQuery<DocumentListResponse, Error>({
     queryKey: ["documents", filters],
     queryFn: () => documentApi.getDocuments(filters),
   });
@@ -62,6 +67,26 @@ export function useCreateDocument() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
       await queryClient.invalidateQueries({ queryKey: ["folders"] });
+    },
+  });
+
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isLoading: mutation.isPending,
+    isError: mutation.isError,
+    error: mutation.error,
+  };
+}
+
+export function useConfirmDocument() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ConfirmDocumentData }) =>
+      documentApi.confirmDocument(id, data),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      await queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
   });
 
@@ -113,8 +138,12 @@ export function useDeleteDocument() {
 export function useBulkUpload() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (files: Array<{ fileUrl: string; fileName: string }>) =>
-      documentApi.bulkUpload(files),
+    mutationFn: (files: File[] | { files: File[]; folderId?: string }) => {
+      if (Array.isArray(files)) {
+        return documentApi.bulkUpload(files);
+      }
+      return documentApi.bulkUpload(files.files, files.folderId);
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
       await queryClient.invalidateQueries({ queryKey: ["inbox"] });
@@ -172,10 +201,35 @@ export function useRenameDocument() {
 }
 
 export function useGetInbox() {
-  const query = useQuery({
+  const prevRef = useRef<Document[] | null>(null);
+
+  const query = useQuery<Document[], Error, Document[]>({
     queryKey: ["inbox"],
     queryFn: () => documentApi.getInbox(),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return Array.isArray(data) && data.some((d) => d.processingStatus === "processing")
+        ? 5000
+        : false;
+    },
   });
+
+  useEffect(() => {
+    if (!query.data) {
+      return;
+    }
+
+    const prev = prevRef.current;
+    const prevHasProcessing = prev?.some((d) => d.processingStatus === "processing");
+    const nowHasProcessing = query.data.some((d) => d.processingStatus === "processing");
+    const nowHasReady = query.data.some((d) => d.processingStatus === "ready");
+
+    if (prevHasProcessing && !nowHasProcessing && nowHasReady) {
+      toast.success("Document(s) are ready for review");
+    }
+
+    prevRef.current = query.data;
+  }, [query.data]);
 
   return {
     documents: query.data ?? [],

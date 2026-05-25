@@ -9,6 +9,7 @@ import type {
   ProcessDocumentResult,
   RenameDocumentInput,
   UpdateDocumentInput,
+  ConfirmDocumentData,
 } from "@/types/document";
 
 type DocumentApiRecord = {
@@ -16,6 +17,7 @@ type DocumentApiRecord = {
   fileName: string;
   fileUrl: string;
   extractedText: string;
+  processingStatus: string;
   title: string;
   summary: string;
   documentOwner?: string | null;
@@ -59,6 +61,7 @@ function normalizeDocument(document: DocumentApiRecord): Document {
     fileName: document.fileName,
     fileUrl: document.fileUrl,
     extractedText: document.extractedText,
+    processingStatus: (document.processingStatus ?? "").toLowerCase() as any,
     title: document.title,
     summary: document.summary,
     documentOwner: document.documentOwner ?? null,
@@ -170,13 +173,19 @@ export const documentApi = {
     return normalizeDocument(response.data);
   },
 
-  async bulkUpload(files: Array<{ fileUrl: string; fileName: string }>): Promise<Document[]> {
-    const response = await apiClient.post<ApiSuccessEnvelope<DocumentApiRecord[]>>(
-      "/documents/bulk",
-      { files },
-    );
+  async bulkUpload(files: File[], folderId?: string): Promise<{ saved: Document[]; failed: string[] }> {
+    const form = new FormData();
+    files.forEach((f) => form.append('files', f));
+    if (folderId) form.append('folderId', folderId);
 
-    return response.data.map(normalizeDocument);
+    const response = await apiClient.postFormData<
+      ApiSuccessEnvelope<{ saved: DocumentApiRecord[]; failed: string[] }>
+    >("/documents/bulk", form);
+
+    return {
+      saved: response.data.saved.map(normalizeDocument),
+      failed: response.data.failed,
+    };
   },
 
   async moveToFolder(id: string, moveDocumentDto: MoveDocumentInput): Promise<Document> {
@@ -203,5 +212,13 @@ export const documentApi = {
     );
 
     return response.data.map(normalizeDocument);
+  },
+  async confirmDocument(id: string, data: Partial<ConfirmDocumentData>): Promise<Document> {
+    const response = await apiClient.patch<ApiSuccessEnvelope<DocumentApiRecord>>(
+      `/documents/${id}/confirm`,
+      data,
+    );
+
+    return normalizeDocument(response.data);
   },
 };

@@ -6,10 +6,32 @@ import { useGetCategories } from "@/lib/hooks/useCategories";
 import { useGetDocuments } from "@/lib/hooks/useDocuments";
 import { DashboardDocumentRow } from "@/components/documents/DashboardDocumentRow";
 import { DocumentDetails } from "@/components/documents/DocumentDetails";
+import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import { SortBar } from "@/components/ui/SortBar";
 import type { Document, DocumentFilters, SortOption } from "@/types/document";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
+
+function getFileType(fileName: string) {
+  const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
+
+  switch (extension) {
+    case "png":
+    case "jpg":
+    case "jpeg":
+    case "gif":
+    case "webp":
+      return `image/${extension === "jpg" ? "jpeg" : extension}`;
+    case "pdf":
+      return "application/pdf";
+    case "xls":
+    case "xlsx":
+    case "csv":
+      return "application/vnd.ms-excel";
+    default:
+      return "application/octet-stream";
+  }
+}
 
 export default function DashboardDocumentsPage() {
   const [filters, setFilters] = useState<DocumentFilters>({
@@ -21,6 +43,7 @@ export default function DashboardDocumentsPage() {
   const [sortBy, setSortBy] = useState<SortOption>("date_desc");
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
 
   const { documents, pagination, isLoading } = useGetDocuments(filters);
   const { categories } = useGetCategories();
@@ -71,7 +94,8 @@ export default function DashboardDocumentsPage() {
       return;
     }
 
-    window.open(document.fileUrl, "_blank", "noopener,noreferrer");
+    setIsDetailsOpen(false);
+    setPreviewDocument(document);
   };
 
   const handleDownloadDocument = (document: Document) => {
@@ -120,7 +144,7 @@ export default function DashboardDocumentsPage() {
         </p>
       </div>
 
-      <section className="space-y-4 rounded-3xl border border-default bg-surface p-5 shadow-sm">
+      <section className="space-y-4 rounded border border-default bg-surface p-5 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-[1.5fr_1fr] xl:grid-cols-[1.5fr_1fr_1fr]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" />
@@ -129,7 +153,7 @@ export default function DashboardDocumentsPage() {
               placeholder="Search documents..."
               value={filters.search ?? ""}
               onChange={(event) => handleSearch(event.target.value)}
-              className="w-full rounded-2xl border border-default bg-[var(--color-bg-secondary)] py-2 pl-10 pr-4 text-foreground placeholder-secondary focus:border-primary focus:outline-none"
+              className="w-full rounded border border-default bg-[var(--color-bg-secondary)] py-2 pl-10 pr-4 text-foreground placeholder-secondary focus:border-primary focus:outline-none"
             />
           </div>
 
@@ -138,7 +162,7 @@ export default function DashboardDocumentsPage() {
             <select
               value={filters.categoryId ?? ""}
               onChange={(event) => handleCategoryFilter(event.target.value || undefined)}
-              className="flex-1 rounded-2xl border border-default bg-[var(--color-bg-secondary)] px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="flex-1 rounded border border-default bg-[var(--color-bg-secondary)] px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
             >
               <option value="">All Categories</option>
               {categories.map((category) => (
@@ -193,8 +217,8 @@ export default function DashboardDocumentsPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-3xl border border-default bg-surface">
-              <div className="grid gap-4 border-b border-default px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-secondary md:grid-cols-[2.5fr_1fr_1fr_1fr_auto]">
+            <div className="overflow-x-auto rounded border border-default bg-surface">
+              <div className="grid gap-4 border-b border-default px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-secondary grid-cols-[minmax(320px,1.8fr)_160px_160px_minmax(140px,1fr)_132px]">
                 <span>Name</span>
                 <span>Owner</span>
                 <span>Last changes</span>
@@ -224,7 +248,7 @@ export default function DashboardDocumentsPage() {
                 type="button"
                 onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                 disabled={currentPage <= 1 || isLoading}
-                className="inline-flex items-center gap-2 rounded-2xl border border-default bg-surface px-4 py-2 text-sm text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded border border-default bg-surface px-4 py-2 text-sm text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
@@ -233,7 +257,7 @@ export default function DashboardDocumentsPage() {
                 type="button"
                 onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage >= totalPages || isLoading}
-                className="inline-flex items-center gap-2 rounded-2xl border border-default bg-surface px-4 py-2 text-sm text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded border border-default bg-surface px-4 py-2 text-sm text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
@@ -249,6 +273,14 @@ export default function DashboardDocumentsPage() {
         onClose={handleCloseDetails}
         onOpen={() => selectedDocument && handleOpenDocument(selectedDocument)}
         onDownload={() => selectedDocument && handleDownloadDocument(selectedDocument)}
+      />
+
+      <DocumentPreview
+        isOpen={Boolean(previewDocument?.fileUrl)}
+        onClose={() => setPreviewDocument(null)}
+        fileUrl={previewDocument?.fileUrl ?? ""}
+        fileName={previewDocument?.fileName ?? ""}
+        fileType={previewDocument ? getFileType(previewDocument.fileName) : "application/octet-stream"}
       />
     </div>
   );

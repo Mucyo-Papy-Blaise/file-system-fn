@@ -24,6 +24,7 @@ type CategoryApiRecord = {
   slug?: string;
   companyId?: string;
   organizationId?: string;
+  description?: string | null;
   documentCount?: number;
   createdAt: string;
   updatedAt: string;
@@ -35,6 +36,7 @@ function normalizeCategory(category: CategoryApiRecord): Category {
     name: category.name,
     slug: category.slug ?? toSlug(category.name),
     companyId: category.companyId ?? category.organizationId ?? "",
+    description: category.description ?? "",
     documentCount: category.documentCount ?? 0,
     createdAt: category.createdAt,
     updatedAt: category.updatedAt,

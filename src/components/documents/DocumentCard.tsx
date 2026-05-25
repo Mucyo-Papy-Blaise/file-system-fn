@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreVertical, Trash2, Eye, FileImage, FileSpreadsheet, FileText, Download } from "lucide-react";
+import { MoreVertical, Trash2, Eye, Download } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -66,7 +66,7 @@ export function DocumentCard({ document, onDetails }: DocumentCardProps) {
   const fileType = getFileType(document.fileName);
 
   const handleDownload = () => {
-    const link = document.createElement("a");
+    const link = window.document.createElement("a");
     link.href = document.fileUrl;
     link.download = document.fileName;
     link.target = "_blank";

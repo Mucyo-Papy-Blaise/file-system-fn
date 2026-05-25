@@ -64,7 +64,7 @@ function getOwnerName(document: Document) {
 
 export function DashboardDocumentRow({ document, onDetails, onOpen, onDownload, extraAction }: DashboardDocumentRowProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  
+
   const fileMeta = getFileMeta(document.fileName);
   const ownerName = getOwnerName(document);
   const formattedDate = new Date(document.updatedAt || document.createdAt).toLocaleDateString(undefined, {
@@ -72,10 +72,13 @@ export function DashboardDocumentRow({ document, onDetails, onOpen, onDownload, 
     day: "numeric",
     year: "numeric",
   });
+  const rowGridColumns = "md:grid-cols-[minmax(320px,1.8fr)_160px_160px_minmax(140px,1fr)_132px]";
 
   return (
     <>
-      <div className="grid items-center gap-4 border-b border-default px-4 py-4 text-sm text-foreground md:grid-cols-[2.5fr_1fr_1fr_1fr_auto]">
+      <div
+        className={`grid items-center gap-4 border-b border-default px-4 py-4 text-sm text-foreground ${rowGridColumns}`}
+      >
         <div className="flex min-w-0 items-center gap-3">
           <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[var(--color-bg-secondary)]">
             {fileMeta.icon}
@@ -105,26 +108,19 @@ export function DashboardDocumentRow({ document, onDetails, onOpen, onDownload, 
           <button
             type="button"
             onClick={() => onOpen(document)}
-            className="rounded-full border border-default bg-surface px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+            className="inline-flex h-9 items-center justify-center border border-default bg-surface px-3 text-xs font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)]"
           >
             Open
           </button>
           {extraAction ?? (
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-default bg-surface text-secondary transition hover:bg-[var(--color-bg-secondary)]"
+                className="inline-flex h-9 w-9 items-center justify-center border border-default bg-surface text-secondary transition hover:bg-[var(--color-bg-secondary)]"
                 ariaLabel={`Document actions for ${document.title || document.fileName}`}
               >
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-[180px]">
-                <DropdownMenuItem 
-                  onClick={() => setIsPreviewOpen(true)} 
-                  className="flex items-center gap-2 text-foreground"
-                >
-                  <Eye className="h-4 w-4" />
-                  Preview
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onDetails(document)} className="flex items-center gap-2 text-foreground">
                   <Eye className="h-4 w-4" />
                   Details

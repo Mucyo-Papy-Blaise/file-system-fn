@@ -11,6 +11,9 @@ import type { SortOption } from "@/types/document";
 
 export default function DashboardInboxPage() {
   const { documents, isLoading } = useGetInbox();
+  const processingCount = documents.filter((d) => d.processingStatus === 'processing').length;
+  const readyCount = documents.filter((d) => d.processingStatus === 'ready').length;
+  const confirmedCount = documents.filter((d) => d.processingStatus === 'confirmed').length;
   const [sortBy, setSortBy] = useState<SortOption>("date_desc");
   const sortedDocuments = useMemo(() => {
     const items = [...documents];
@@ -46,14 +49,14 @@ export default function DashboardInboxPage() {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="rounded-3xl bg-surface px-4 py-3 text-sm text-foreground shadow-sm">
+          <div className="rounded bg-surface px-4 py-3 text-sm text-foreground shadow-sm flex items-center gap-5">
             <p className="text-xs uppercase tracking-[0.18em] text-secondary">Inbox count</p>
-            <p className="mt-1 text-lg font-semibold text-foreground">{documents.length}</p>
+            <p className="mt-1 font-semibold text-foreground">{documents.length}</p>
           </div>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 rounded-2xl border border-default bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+            className="inline-flex items-center gap-2 rounded border border-default bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)]"
           >
             <RefreshCcw className="h-4 w-4" />
             Refresh
@@ -62,6 +65,23 @@ export default function DashboardInboxPage() {
       </div>
 
       <SortBar sortBy={sortBy} onChange={setSortBy} />
+
+      <div className="flex gap-3">
+        <div className="rounded px-4 py-2 bg-yellow-100 text-yellow-800">{processingCount} processing</div>
+        <div className="rounded px-4 py-2 bg-blue-100 text-blue-800">{readyCount} ready for review</div>
+        <div className="rounded px-4 py-2 bg-green-100 text-green-800">{confirmedCount} confirmed</div>
+      </div>
+
+      {documents.length > 0 && (
+        <div className="mt-2">
+          <div className="h-2 w-full rounded-full bg-[var(--color-bg-tertiary)]">
+            <div
+              className="h-2 rounded-full bg-primary"
+              style={{ width: `${Math.round(((readyCount + confirmedCount) / documents.length) * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

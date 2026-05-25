@@ -155,14 +155,14 @@ export default function CollectionsPage() {
         </div>
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
+          className="flex items-center gap-2 rounded bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
         >
           <Plus className="h-4 w-4" />
           New Collection
         </button>
       </div>
 
-      <section className="space-y-4 rounded-3xl border border-default bg-surface p-5 shadow-sm">
+      <section className="space-y-4 rounded border border-default bg-surface p-5 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-[1.5fr_1fr] xl:grid-cols-[1.5fr_1fr_1fr]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" />
@@ -171,7 +171,7 @@ export default function CollectionsPage() {
               placeholder="Search collections..."
               value={filters.search}
               onChange={(event) => handleSearch(event.target.value)}
-              className="w-full rounded-2xl border border-default bg-[var(--color-bg-secondary)] py-2 pl-10 pr-4 text-foreground placeholder-secondary focus:border-primary focus:outline-none"
+              className="w-full rounded border border-default bg-[var(--color-bg-secondary)] py-2 pl-10 pr-4 text-foreground placeholder-secondary focus:border-primary focus:outline-none"
             />
           </div>
 
@@ -181,7 +181,7 @@ export default function CollectionsPage() {
               <select
                 value={filters.ownerId}
                 onChange={(event) => handleOwnerFilter(event.target.value || undefined)}
-                className="flex-1 rounded-2xl border border-default bg-[var(--color-bg-secondary)] px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                className="flex-1 rounded border border-default bg-[var(--color-bg-secondary)] px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
               >
                 <option value="">All owners</option>
                 {ownerOptions.map((owner) => (
@@ -198,7 +198,7 @@ export default function CollectionsPage() {
             <select
               value={filters.limit}
               onChange={(event) => handlePageSizeChange(Number(event.target.value))}
-              className="rounded-2xl border border-default bg-[var(--color-bg-secondary)] px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="rounded border border-default bg-[var(--color-bg-secondary)] px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
             >
               {[10, 20, 50].map((option) => (
                 <option key={option} value={option}>
@@ -209,7 +209,7 @@ export default function CollectionsPage() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-default bg-[var(--color-bg-secondary)] p-4 text-sm text-foreground">
+        <div className="rounded border border-default bg-[var(--color-bg-secondary)] p-4 text-sm text-foreground">
           {isLoading
             ? "Loading collections..."
             : `Showing ${paginatedCollections.length} of ${filteredCollections.length} collections`}
@@ -221,7 +221,7 @@ export default function CollectionsPage() {
               {[...Array(3)].map((_, index) => (
                 <div
                   key={index}
-                  className="space-y-4 rounded-3xl border border-default bg-surface p-6"
+                  className="space-y-4 rounded border border-default bg-surface p-6"
                 >
                   <LoadingSkeleton width="60%" height={20} />
                   <LoadingSkeleton width="100%" height={14} />
@@ -253,7 +253,7 @@ export default function CollectionsPage() {
               }}
             />
           ) : (
-            <div className="overflow-x-auto rounded-3xl border border-default bg-surface">
+            <div className="overflow-x-auto rounded border border-default bg-surface">
               <div className="grid gap-4 border-b border-default px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-secondary md:grid-cols-[2.5fr_1fr_1fr_1fr_auto]">
                 <span>Name</span>
                 <span>Owner</span>
@@ -284,7 +284,7 @@ export default function CollectionsPage() {
                 type="button"
                 onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                 disabled={currentPage <= 1}
-                className="inline-flex items-center gap-2 rounded-2xl border border-default bg-surface px-4 py-2 text-sm text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded border border-default bg-surface px-4 py-2 text-sm text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
@@ -293,7 +293,7 @@ export default function CollectionsPage() {
                 type="button"
                 onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage >= totalPages}
-                className="inline-flex items-center gap-2 rounded-2xl border border-default bg-surface px-4 py-2 text-sm text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded border border-default bg-surface px-4 py-2 text-sm text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Next
                 <ChevronRight className="h-4 w-4" />

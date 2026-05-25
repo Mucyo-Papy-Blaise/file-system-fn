@@ -34,8 +34,8 @@ export function Modal({
   return (
     <div
       className={[
-        "fixed inset-0 z-50 flex items-start",
-        isSideVariant ? "justify-end" : "justify-center px-4 pb-4 pt-0",
+        "fixed inset-0 z-[70] flex",
+        isSideVariant ? "items-stretch justify-end" : "items-start justify-center px-4 pb-4 pt-0",
       ].join(" ")}
     >
       <button
@@ -49,19 +49,19 @@ export function Modal({
         onClick={disableOverlayClick ? undefined : onClose}
       />
 
-      <div
-        className={[
-          "relative z-10 bg-surface shadow-[var(--shadow-xl)]",
-          isSideVariant
-            ? "flex h-full w-full max-w-[720px] flex-col border-l border-black/10 px-5 pb-5 pt-0 sm:px-7 sm:pb-7 sm:pt-0"
-            : "w-full max-w-lg rounded border border-default p-6",
-        ].join(" ")}
-      >
+        <div
+          className={[
+            "relative z-[71] bg-surface shadow-[var(--shadow-xl)]",
+            isSideVariant
+              ? "flex h-screen w-full max-w-[720px] flex-col self-stretch overflow-hidden border-l border-black/10"
+              : "w-full max-w-lg rounded border border-default p-6",
+          ].join(" ")}
+        >
         {hideHeader && !disableClose && isSideVariant ? (
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-5 top-5 z-20 rounded-xl p-2 text-secondary transition hover:bg-[var(--color-bg-secondary)] hover:text-foreground sm:right-7"
+            className="absolute right-5 top-5 z-[72] rounded-xl p-2 text-secondary transition hover:bg-[var(--color-bg-secondary)] hover:text-foreground sm:right-7"
             aria-label="Close modal"
           >
             <X className="h-5 w-5" />
@@ -84,7 +84,7 @@ export function Modal({
           </div>
         ) : null}
 
-        <div className={isSideVariant ? "flex-1 overflow-y-auto" : undefined}>
+        <div className={isSideVariant ? "flex-1 overflow-y-auto px-5 pb-5 pt-0 sm:px-7 sm:pb-7" : undefined}>
           {children}
         </div>
       </div>

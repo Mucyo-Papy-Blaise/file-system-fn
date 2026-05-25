@@ -2,10 +2,19 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Bell, LibraryBig, Menu, Search, Upload } from "lucide-react";
+import { Bell, ChevronDown, LibraryBig, Menu, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
+import { useAuth } from "@/lib/auth-context";
 import { useSearchCollections } from "@/lib/hooks/useSearch";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TopBarProps {
   pageTitle: string;
@@ -13,29 +22,48 @@ interface TopBarProps {
   onUploadClick?: () => void;
 }
 
+function getInitials(name?: string | null) {
+  if (!name) return "U";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
 export function TopBar({ pageTitle, onMenuClick, onUploadClick }: TopBarProps) {
   const [query, setQuery] = useState("");
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [debouncedQuery] = useDebounce(query, 300);
+  const isSearchDropdownOpen = debouncedQuery.length >= 2;
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
 
+  const { user, logout } = useAuth();
   const { collections, isLoading } = useSearchCollections(debouncedQuery);
 
-  useEffect(() => {
-    setIsDropdownOpen(debouncedQuery.length >= 2);
-  }, [debouncedQuery]);
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success("Logged out successfully");
+      router.replace("/login");
+    } catch (error) {
+      toast.error("Failed to logout");
+      console.error("Logout error:", error);
+    }
+  };
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (!wrapperRef.current) return;
       if (!wrapperRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
+        setQuery("");
       }
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setIsDropdownOpen(false);
+        setQuery("");
       }
     };
 
@@ -77,7 +105,7 @@ export function TopBar({ pageTitle, onMenuClick, onUploadClick }: TopBarProps) {
             aria-label="Search collections"
           />
 
-          {isDropdownOpen && (
+          {isSearchDropdownOpen && (
             <div className="absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-3xl border border-default bg-surface shadow-lg">
               {isLoading ? (
                 <div className="space-y-2 p-4">
@@ -96,7 +124,7 @@ export function TopBar({ pageTitle, onMenuClick, onUploadClick }: TopBarProps) {
                       key={collection.id}
                       href={`/dashboard/collections/${collection.id}`}
                       className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--color-bg-secondary)]"
-                      onClick={() => setIsDropdownOpen(false)}
+                      onClick={() => setQuery("")}
                     >
                       <div className="flex h-10 w-10 items-center justify-center rounded-3xl bg-[var(--color-bg-secondary)] text-secondary">
                         <LibraryBig className="h-5 w-5" />
@@ -124,21 +152,50 @@ export function TopBar({ pageTitle, onMenuClick, onUploadClick }: TopBarProps) {
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={onUploadClick}
-          className="flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
-          aria-label="Upload document"
-        >
-          <Upload className="h-4 w-4" />
-          <span className="hidden sm:inline">Upload</span>
-        </button>
-
-        <button
-          type="button"
           className="rounded-xl p-2 text-secondary transition hover:bg-[var(--color-bg-secondary)] hover:text-foreground"
           aria-label="Notifications"
         >
           <Bell className="h-5 w-5" />
         </button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            asChild
+            ariaLabel="Account menu"
+            className="rounded-3xl border border-default bg-[var(--color-bg-secondary)] px-3 py-2 text-sm font-medium text-foreground transition hover:bg-[var(--color-bg-tertiary)]"
+          >
+            <button type="button" className="flex items-center gap-2">
+              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-subtle)] text-sm font-semibold text-primary">
+                {getInitials(user?.name)}
+              </span>
+              <span className="hidden min-w-0 truncate sm:inline">
+                {user?.name ?? "Account"}
+              </span>
+              <ChevronDown className="h-4 w-4 text-secondary" />
+            </button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="end" className="min-w-[220px]">
+            <div className="space-y-2 px-4 py-4">
+              <p className="truncate text-sm font-semibold text-foreground">
+                {user?.name ?? "Guest User"}
+              </p>
+              <p className="truncate text-xs text-secondary">{user?.email ?? "No email"}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-[var(--color-primary-subtle)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+                  {user?.role ?? "Guest"}
+                </span>
+                <span className="truncate text-xs text-secondary">
+                  {user?.organizationName ?? "No organization"}
+                </span>
+              </div>
+            </div>
+            <div className="border-t border-default" />
+            <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

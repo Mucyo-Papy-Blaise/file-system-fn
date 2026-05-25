@@ -40,6 +40,7 @@ interface DocumentCardProps {
   onDownload?: (documentId: string) => void;
   onRename?: (documentId: string, newName: string) => void;
   isOwner?: boolean;
+  showDepartmentColumn?: boolean;
 }
 
 function getFileMeta(fileName: string) {
@@ -91,6 +92,7 @@ export function DocumentCard({
   onDownload,
   onRename,
   isOwner = false,
+  showDepartmentColumn = false,
 }: DocumentCardProps) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -122,9 +124,15 @@ export function DocumentCard({
     setIsDeleteOpen(false);
   };
 
+  const documentGridColumns = showDepartmentColumn
+    ? "grid-cols-[minmax(320px,1.8fr)_160px_160px_180px_minmax(140px,1fr)_132px]"
+    : "grid-cols-[minmax(320px,1.8fr)_160px_160px_minmax(140px,1fr)_132px]";
+
   return (
     <>
-      <div className="grid grid-cols-[minmax(320px,1.8fr)_180px_180px_160px_184px] items-center gap-4 border-t border-default px-4 py-3 text-sm transition-colors hover:bg-[var(--color-bg-secondary)]">
+      <div
+        className={`grid ${documentGridColumns} items-center gap-4 border-t border-default px-4 py-3 text-sm transition-colors hover:bg-[var(--color-bg-secondary)]`}
+      >
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-[var(--color-bg-secondary)]">
             {fileMeta.icon}
@@ -181,6 +189,9 @@ export function DocumentCard({
           })}
         </p>
         <p className="truncate text-secondary">{fileMeta.typeLabel}</p>
+        {showDepartmentColumn ? (
+          <p className="truncate text-secondary">No department</p>
+        ) : null}
         <div>
           <span
             className={`inline-flex px-2.5 py-1 text-xs font-medium ${fileMeta.chipClassName}`}
@@ -189,10 +200,24 @@ export function DocumentCard({
           </span>
         </div>
 
-        <div className="relative flex items-center justify-end">
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (onDetails) {
+                onDetails(document.id);
+              } else {
+                onView?.(document.id);
+              }
+            }}
+            className="inline-flex h-9 items-center justify-center border border-default px-3 text-xs font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+          >
+            View
+          </button>
+
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="p-2 text-secondary transition hover:bg-[var(--color-bg-tertiary)] hover:text-foreground"
+              className="inline-flex h-9 w-9 items-center justify-center border border-default text-secondary transition hover:bg-[var(--color-bg-tertiary)] hover:text-foreground"
               ariaLabel={`Document actions for ${displayName}`}
             >
               <MoreHorizontal className="h-4 w-4" />

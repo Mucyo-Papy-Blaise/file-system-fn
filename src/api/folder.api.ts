@@ -22,6 +22,10 @@ type FolderApiRecord = {
     id: string;
     name: string;
   };
+  department?: {
+    id: string;
+    name: string;
+  } | null;
 };
 
 type DocumentApiRecord = {
@@ -75,6 +79,7 @@ function normalizeFolder(folder: FolderApiRecord): Folder {
     organizationId: folder.organizationId,
     itemCount: folder.itemCount ?? 0,
     createdBy,
+    department: folder.department ?? null,
     createdAt: folder.createdAt,
     updatedAt: folder.updatedAt,
   };
@@ -119,17 +124,18 @@ export const folderApi = {
     return normalizeFolder(response.data);
   },
 
-  async getRootFolders(): Promise<Folder[]> {
+  async getRootFolders(options?: { mine?: boolean }): Promise<Folder[]> {
     const response = await apiClient.get<ApiSuccessEnvelope<FolderApiRecord[]>>(
-      "/folders",
+      `/folders${options?.mine ? '?mine=true' : ''}`,
     );
 
     return response.data.map(normalizeFolder);
   },
 
-  async getFolderContents(id: string): Promise<FolderContents> {
+  async getFolderContents(id: string, options?: { mine?: boolean }): Promise<FolderContents> {
+    const query = options?.mine ? '?mine=true' : '';
     const response = await apiClient.get<FolderContentsResponseEnvelope>(
-      `/folders/${id}`,
+      `/folders/${id}${query}`,
     );
     const payload = response.data;
 

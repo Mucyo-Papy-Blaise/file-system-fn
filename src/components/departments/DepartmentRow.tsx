@@ -77,7 +77,7 @@ function DepartmentAdminAction({
 }) {
   const { department: deptDetail, isLoading } = useGetDepartmentById(departmentId);
 
-  const admin = deptDetail?.users?.data?.find((u: any) => u.role === Role.ADMIN);
+  const admin = deptDetail?.members?.find((u) => u.role === Role.ADMIN);
 
   if (isLoading) {
     return (

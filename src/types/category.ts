@@ -3,6 +3,7 @@ export interface Category {
   name: string;
   slug: string;
   companyId: string;
+  description: string
   documentCount: number;
   createdAt: string;
   updatedAt: string;
@@ -43,6 +44,7 @@ export interface CategoryListResponseEnvelope {
       slug?: string;
       companyId?: string;
       organizationId?: string;
+      description?: string | null;
       documentCount?: number;
       createdAt: string;
       updatedAt: string;
@@ -60,6 +62,7 @@ export interface CategoryResponseEnvelope {
     slug?: string;
     companyId?: string;
     organizationId?: string;
+    description?: string | null;
     documentCount?: number;
     createdAt: string;
     updatedAt: string;

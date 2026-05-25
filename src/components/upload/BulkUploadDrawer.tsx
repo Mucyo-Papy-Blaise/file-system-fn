@@ -5,7 +5,6 @@ import { Upload, FileText, X, Check, AlertCircle, Loader } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { Modal } from "@/components/ui/Modal";
-import { uploadApi } from "@/api/upload.api";
 import { useBulkUpload } from "@/lib/hooks/useDocuments";
 import type { BulkUploadFile } from "@/types/document";
 
@@ -13,11 +12,16 @@ const MAX_FILES = 5;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 interface BulkUploadDrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+  embedded?: boolean;
 }
 
-export function BulkUploadDrawer({ isOpen, onClose }: BulkUploadDrawerProps) {
+export function BulkUploadDrawer({
+  isOpen = true,
+  onClose = () => undefined,
+  embedded = false,
+}: BulkUploadDrawerProps) {
   const [files, setFiles] = useState<BulkUploadFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [allComplete, setAllComplete] = useState(false);
@@ -100,12 +104,10 @@ export function BulkUploadDrawer({ isOpen, onClose }: BulkUploadDrawerProps) {
 
   const handleUploadAll = async () => {
     if (files.length === 0) return;
-
     setIsUploading(true);
-    const fileUrls: Array<{ fileUrl: string; fileName: string }> = [];
+    const rawFiles: File[] = [];
 
     try {
-      // Upload files one by one to Cloudinary
       for (let i = 0; i < files.length; i++) {
         setFiles((prev) => {
           const newFiles = [...prev];
@@ -114,14 +116,7 @@ export function BulkUploadDrawer({ isOpen, onClose }: BulkUploadDrawerProps) {
         });
 
         try {
-          const formData = new FormData();
-          formData.append("file", files[i].file);
-
-          const result = await uploadApi.uploadFile(formData);
-          fileUrls.push({
-            fileUrl: result.url,
-            fileName: files[i].fileName,
-          });
+          rawFiles.push(files[i].file);
 
           setFiles((prev) => {
             const newFiles = [...prev];
@@ -138,14 +133,18 @@ export function BulkUploadDrawer({ isOpen, onClose }: BulkUploadDrawerProps) {
         }
       }
 
-      // Bulk save to backend
-      await bulkUpload.mutateAsync(fileUrls);
+      // Send raw files to backend bulk endpoint
+      const { saved, failed } = await bulkUpload.mutateAsync({ files: rawFiles });
 
       setAllComplete(true);
-      toast.success(`${fileUrls.length} files uploaded successfully`);
+      onClose();
+      toast.success(`${saved.length} files uploaded! AI is processing them. Check your Inbox when ready.`);
+      if (failed && failed.length > 0) {
+        toast.error(`${failed.length} files failed to upload: ${failed.join(', ')}`);
+      }
     } catch (error) {
-      toast.error("Failed to save files to database");
-      console.error("Bulk upload error:", error);
+      toast.error('Failed to save files to database');
+      console.error('Bulk upload error:', error);
     } finally {
       setIsUploading(false);
     }
@@ -163,15 +162,8 @@ export function BulkUploadDrawer({ isOpen, onClose }: BulkUploadDrawerProps) {
   const showUploadStep = files.length > 0 && !isUploading && !allComplete;
   const showProgressStep = isUploading || allComplete;
 
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={canClose ? onClose : undefined}
-      title="Bulk Upload Files"
-      variant="side"
-      disableClose={!canClose}
-      disableOverlayClick={!canClose}
-    >
+  const content = (
+    <>
       <div className="space-y-6">
         {/* Subtitle */}
         <p className="text-sm text-secondary">
@@ -314,6 +306,23 @@ export function BulkUploadDrawer({ isOpen, onClose }: BulkUploadDrawerProps) {
         onChange={handleFileInputChange}
         className="hidden"
       />
+    </>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Bulk Upload Files"
+      variant="side"
+      disableClose={!canClose}
+      disableOverlayClick={!canClose}
+    >
+      {content}
     </Modal>
   );
 }

@@ -14,3 +14,11 @@ export enum InvitationStatus {
     ACCEPTED = 'ACCEPTED',
     CANCELLED = 'CANCELLED'
 }
+
+export enum ProcessingStatus {
+    CONFIRMED = 'CONFIRMED',
+    PROCESSING = 'PROCESSING',
+    READY = 'READY',
+    FAILED = 'FAILED'
+}
+

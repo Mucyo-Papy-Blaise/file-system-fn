@@ -7,6 +7,10 @@ export interface Folder {
     id: string;
     name: string;
   };
+  department?: {
+    id: string;
+    name: string;
+  } | null;
   organizationId: string;
   itemCount: number;
   createdAt: string;

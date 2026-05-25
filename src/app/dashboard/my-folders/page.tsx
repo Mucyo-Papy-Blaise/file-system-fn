@@ -36,6 +36,7 @@ export default function MyFoldersPage() {
       title="My Folders"
       description="Manage only the folders you created and the documents you uploaded."
       currentUser={user}
+      onlyMine
     />
   );
 }

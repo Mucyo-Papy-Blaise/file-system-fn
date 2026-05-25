@@ -5,10 +5,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================================
-   CSS VARIABLES
-   ============================================================ */
-
 :root {
   /* ── Brand / Primary ────────────────────────────────────── */
   --color-primary: #14532d; /* deep forest green   */
