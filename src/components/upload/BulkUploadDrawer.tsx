@@ -176,7 +176,7 @@ export function BulkUploadDrawer({
             <div
               onDragOver={handleDragOver}
               onDrop={handleDrop}
-              className="rounded-3xl border-2 border-dashed border-default bg-[var(--color-bg-secondary)] p-8 text-center transition hover:border-primary hover:bg-[var(--color-bg-tertiary)]"
+              className="rounded border-2 border-dashed border-default bg-[var(--color-bg-secondary)] p-8 text-center transition hover:border-primary hover:bg-[var(--color-bg-tertiary)]"
             >
               <Upload className="mx-auto h-12 w-12 text-secondary" />
               <p className="mt-4 text-sm text-foreground">Drag & drop or click to browse</p>
@@ -185,7 +185,7 @@ export function BulkUploadDrawer({
               </p>
               <label
                 htmlFor="bulk-file-input"
-                className="mt-4 inline-flex cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
+                className="mt-4 inline-flex cursor-pointer rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
               >
                 Choose Files
               </label>
@@ -200,12 +200,12 @@ export function BulkUploadDrawer({
                 {files.map((file, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-3 rounded-2xl border border-default bg-[var(--color-bg-secondary)] p-3"
+                    className="flex items-center gap-3 rounded border border-default bg-[var(--color-bg-secondary)] p-3"
                   >
                     {file.file.type === "application/pdf" ? (
                       <FileText className="h-5 w-5 flex-shrink-0 text-red-600" />
                     ) : (
-                      <div className="relative h-10 w-10 flex-shrink-0 rounded-lg overflow-hidden">
+                      <div className="relative h-10 w-10 flex-shrink-0 rounded overflow-hidden">
                         <Image
                           src={file.preview}
                           alt={file.fileName}
@@ -220,7 +220,7 @@ export function BulkUploadDrawer({
                         type="text"
                         value={file.fileName}
                         onChange={(e) => handleRenameFile(index, e.target.value)}
-                        className="w-full rounded-lg border border-default bg-surface px-2 py-1 text-xs text-foreground placeholder-secondary focus:border-primary focus:outline-none"
+                        className="w-full rounded border border-default bg-surface px-2 py-1 text-xs text-foreground placeholder-secondary focus:border-primary focus:outline-none"
                       />
                       <p className="mt-1 text-xs text-secondary">
                         {(file.size / 1024 / 1024).toFixed(2)} MB
@@ -230,7 +230,7 @@ export function BulkUploadDrawer({
                     <button
                       type="button"
                       onClick={() => handleRemoveFile(index)}
-                      className="rounded-lg p-1 hover:bg-[var(--color-bg-tertiary)]"
+                      className="rounded p-1 hover:bg-[var(--color-bg-tertiary)]"
                     >
                       <X className="h-4 w-4 text-secondary" />
                     </button>
@@ -245,7 +245,7 @@ export function BulkUploadDrawer({
                 type="button"
                 onClick={handleUploadAll}
                 disabled={isUploading}
-                className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover disabled:opacity-50"
+                className="w-full rounded bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover disabled:opacity-50"
               >
                 Upload All
               </button>
@@ -259,7 +259,7 @@ export function BulkUploadDrawer({
             {files.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center gap-3 rounded-2xl border border-default bg-[var(--color-bg-secondary)] p-3"
+                className="flex items-center gap-3 rounded border border-default bg-[var(--color-bg-secondary)] p-3"
               >
                 {file.status === "pending" && (
                   <div className="h-5 w-5 rounded-full bg-gray-400 flex-shrink-0" />
@@ -289,7 +289,7 @@ export function BulkUploadDrawer({
               <button
                 type="button"
                 onClick={handleDone}
-                className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
+                className="w-full rounded bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
               >
                 Done
               </button>

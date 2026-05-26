@@ -19,7 +19,7 @@ interface InboxDocumentCardProps {
   document: Document;
 }
 
-export function InboxDocumentCard({ document }: InboxDocumentCardProps) {
+export function UnsortedDocumentCard({ document }: InboxDocumentCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(document.fileName);
   const [isMoveOpen, setIsMoveOpen] = useState(false);

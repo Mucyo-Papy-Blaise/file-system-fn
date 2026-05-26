@@ -7,6 +7,7 @@ import {
   Folder,
   FolderOpen,
   Inbox,
+  LayersIcon,
   LayoutDashboard,
   LibraryBig,
   Search,
@@ -58,7 +59,7 @@ const navItems: NavItem[] = [
   },
   { href: "/dashboard/documents", label: "Documents", icon: FileText },
   { href: "/dashboard/collections", label: "Collections", icon: LibraryBig },
-  { href: "/dashboard/inbox", label: "Inbox", icon: Inbox },
+  { href: "/dashboard/unsorted", label: "Unsorted", icon: LayersIcon },
   {
     href: "/dashboard/members",
     label: "Members",
@@ -163,7 +164,7 @@ export function Sidebar({ isOpen, pathname, user, onClose }: SidebarProps) {
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span>{item.label}</span>
-                {item.href === "/dashboard/inbox" && inboxCount > 0 ? (
+                {item.href === "/dashboard/unsorted" && inboxCount > 0 ? (
                   <span
                     className={`ml-auto rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${processingCount > 0 ? "bg-yellow-400 text-black" : "bg-blue-600 text-white"}`}
                   >

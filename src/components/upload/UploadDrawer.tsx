@@ -231,7 +231,7 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
               <button
                 type="button"
                 onClick={() => handleModeChange("single")}
-                className={`rounded-2xl px-3 py-1 text-sm font-semibold transition ${
+                className={`rounded px-3 py-1 text-sm font-semibold transition ${
                   mode === "single"
                     ? "bg-primary text-primary-foreground"
                     : "text-secondary hover:bg-[var(--color-bg-tertiary)]"
@@ -242,7 +242,7 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
               <button
                 type="button"
                 onClick={() => handleModeChange("multiple")}
-                className={`rounded-2xl px-3 py-1 text-sm font-semibold transition ${
+                className={`rounded px-3 py-1 text-sm font-semibold transition ${
                   mode === "multiple"
                     ? "bg-primary text-primary-foreground"
                     : "text-secondary hover:bg-[var(--color-bg-tertiary)]"
@@ -255,7 +255,7 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 hover:bg-[var(--color-bg-secondary)]"
+            className="rounded p-2 hover:bg-[var(--color-bg-secondary)]"
           >
             <X className="h-5 w-5" />
           </button>
@@ -278,7 +278,7 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
                 <button
                   type="button"
                   onClick={() => handleProcessFile(selectedFile)}
-                  className="w-full rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
+                  className="w-full rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
                 >
                   Process Document
                 </button>
@@ -304,7 +304,7 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
           {state === "CONFIRM" && aiResult && (
             mode === "single" ? (
             <div className="space-y-6">
-              <div className="rounded-3xl border border-default bg-surface p-4">
+              <div className="rounded border border-default bg-surface p-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground">Selected file</p>
@@ -320,7 +320,7 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
                         href={selectedFileUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex rounded-2xl border border-default bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+                        className="inline-flex rounded border border-default bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)]"
                       >
                         Preview
                       </a>
@@ -328,7 +328,7 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
                     <button
                       type="button"
                       onClick={handleChangeFile}
-                      className="inline-flex rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
+                      className="inline-flex rounded border border-default bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)]"
                     >
                       Change file
                     </button>
@@ -355,7 +355,7 @@ export function UploadDrawer({ isOpen, onClose, folderId: propFolderId }: Upload
           {state === "SUCCESS" && (
             mode === "single" ? (
             <div className="space-y-4 py-8 text-center">
-              <div className="mx-auto h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+              <div className="mx-auto h-12 w-12 rounded bg-green-100 flex items-center justify-center">
                 <svg
                   className="h-6 w-6 text-green-600"
                   fill="none"

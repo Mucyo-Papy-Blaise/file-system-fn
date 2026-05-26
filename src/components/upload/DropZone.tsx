@@ -78,7 +78,7 @@ export function DropZone({ onFileSelected, selectedFile }: DropZoneProps) {
               src={URL.createObjectURL(selectedFile)}
               alt="preview"
               fill
-              className="rounded-lg object-cover"
+              className="rounded object-cover"
             />
           </div>
           <p className="text-sm font-medium text-foreground">
@@ -92,7 +92,7 @@ export function DropZone({ onFileSelected, selectedFile }: DropZoneProps) {
   return (
     <div className="space-y-4">
       {selectedFile ? (
-        <div className="rounded-3xl border border-default bg-surface p-6">
+        <div className="rounded border border-default bg-surface p-6">
           <div className="flex items-center justify-between">
             <div>{getFilePreview()}</div>
             <button
@@ -105,7 +105,7 @@ export function DropZone({ onFileSelected, selectedFile }: DropZoneProps) {
           </div>
           <label
             htmlFor="file-input"
-            className="mt-4 inline-flex cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
+            className="mt-4 inline-flex cursor-pointer rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
           >
             Replace File
           </label>
@@ -114,7 +114,7 @@ export function DropZone({ onFileSelected, selectedFile }: DropZoneProps) {
         <div
           onDragOver={handleDragOver}
           onDrop={handleDrop}
-          className="rounded-3xl border-2 border-dashed border-default bg-[var(--color-bg-secondary)] p-8 text-center transition hover:border-primary hover:bg-[var(--color-bg-tertiary)]"
+          className="rounded border-2 border-dashed border-default bg-[var(--color-bg-secondary)] p-8 text-center transition hover:border-primary hover:bg-[var(--color-bg-tertiary)]"
         >
           <Upload className="mx-auto h-12 w-12 text-secondary" />
           <p className="mt-4 text-sm text-foreground">Drag & drop or click to browse</p>
@@ -123,7 +123,7 @@ export function DropZone({ onFileSelected, selectedFile }: DropZoneProps) {
           </p>
           <label
             htmlFor="file-input"
-            className="mt-4 inline-flex cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
+            className="mt-4 inline-flex cursor-pointer rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
           >
             Choose File
           </label>

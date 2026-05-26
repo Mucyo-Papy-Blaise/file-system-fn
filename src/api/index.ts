@@ -9,3 +9,4 @@ export * from "./invitation.api";
 export * from "./health.api";
 export * from "./query-client";
 export * from "./search.api";
+export * from "./analytics.api";

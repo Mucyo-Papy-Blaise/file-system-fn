@@ -83,6 +83,12 @@ export interface CreateDocumentInput {
 export interface UpdateDocumentInput {
   title?: string;
   summary?: string;
+  documentOwner?: string | null;
+  author?: string | null;
+  documentType?: string | null;
+  concerning?: string | null;
+  purpose?: string | null;
+  documentDate?: string | null;
   categoryId?: string;
   folderId?: string;
 }

@@ -85,7 +85,7 @@ export default function DashboardCategoriesPage() {
           {[...Array(3)].map((index) => (
             <div
               key={index}
-              className="space-y-4 rounded-3xl border border-default bg-surface p-6"
+              className="space-y-4 rounded border border-default bg-surface p-6"
             >
               <LoadingSkeleton width="45%" height={18} />
               <LoadingSkeleton width="100%" height={16} />
@@ -111,7 +111,7 @@ export default function DashboardCategoriesPage() {
           {[...Array(6)].map((_, index) => (
             <div
               key={index}
-              className="space-y-4 rounded-3xl border border-default bg-surface p-6"
+              className="space-y-4 rounded border border-default bg-surface p-6"
             >
               <LoadingSkeleton width="40%" height={18} />
               <LoadingSkeleton width="100%" height={16} />
@@ -165,7 +165,7 @@ export default function DashboardCategoriesPage() {
       </div>
 
       {categories.length > 0 ? (
-        <div className="overflow-x-auto rounded-3xl border border-default bg-surface">
+        <div className="overflow-x-auto rounded border border-default bg-surface">
           <div className="grid gap-4 border-b border-default px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-secondary md:grid-cols-[2.5fr_1fr_1fr_auto]">
             <span>Category</span>
             <span>Documents</span>

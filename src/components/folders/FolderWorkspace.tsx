@@ -405,31 +405,15 @@ export function FolderWorkspace({
       </header>
 
       <section className="border border-default bg-surface">
-        <div className="border-b border-default bg-[linear-gradient(180deg,rgba(248,250,252,0.98)_0%,rgba(255,255,255,0.98)_100%)] px-5 py-4">
+        <div className=" bg-[linear-gradient(180deg,rgba(248,250,252,0.98)_0%,rgba(255,255,255,0.98)_100%)] px-5 py-2">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-default bg-[var(--color-bg-secondary)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-secondary">
-                <FolderSearch className="h-3.5 w-3.5" />
-                File Explorer
-              </div>
-              <div className="space-y-1">
-                <h2 className="text-xl font-semibold text-foreground">
-                  {currentFolderName}
-                </h2>
-                <p className="text-sm text-secondary">
-                  {isInFolder
-                    ? "Manage files inside this folder with inline rename and quick actions."
-                    : "Browse company folders in a desktop-style details view."}
-                </p>
-              </div>
-            </div>
 
             {showActions ? (
               <div className="flex flex-col gap-2 sm:flex-row">
                 <button
                   type="button"
                   onClick={() => handleUploadDocument()}
-                  className="inline-flex items-center justify-center gap-2 border border-default bg-surface px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+                  className="inline-flex items-center justify-center gap-2 rounded border border-default bg-surface px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
                 >
                   <UploadIcon className="h-4 w-4" />
                   Upload file
@@ -437,7 +421,7 @@ export function FolderWorkspace({
                 <button
                   type="button"
                   onClick={handleStartNewFolder}
-                  className="inline-flex items-center justify-center gap-2 bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:bg-primary-hover"
+                  className="inline-flex items-center rounded justify-center gap-2 bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:bg-primary-hover"
                 >
                   <Plus className="h-4 w-4" />
                   New folder
@@ -566,6 +550,7 @@ export function FolderWorkspace({
       </section>
 
       <DocumentDetails
+        key={selectedDocument?.id ?? 'no-document'}
         document={selectedDocument}
         isOpen={isDetailsOpen}
         onClose={handleCloseDocumentDetails}

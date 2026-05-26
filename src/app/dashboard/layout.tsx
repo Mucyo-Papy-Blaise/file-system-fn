@@ -4,7 +4,6 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SetupCategoriesModal } from "@/components/categories/SetupCategoriesModal";
-import { UploadDrawer } from "@/components/upload/UploadDrawer";
 import { DashboardProvider } from "@/lib/dashboard-context";
 import { useAuth } from "@/lib/auth-context";
 import { useOrganizationSetup } from "@/lib/hooks/useOrganizationSetup";
@@ -16,6 +15,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard/my-folders": "My Folders",
   "/dashboard/folders": "Folders",
   "/dashboard/inbox": "Inbox",
+  "/dashboard/unsorted": "Unsorted",
   "/dashboard/documents": "My Documents",
   "/dashboard/categories": "Categories",
   "/dashboard/collections": "Collections",
