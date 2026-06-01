@@ -122,7 +122,7 @@ export function TopBar({ pageTitle, onMenuClick, onUploadClick }: TopBarProps) {
                   {collections.slice(0, 5).map((collection) => (
                     <Link
                       key={collection.id}
-                      href={`/dashboard/collections/${collection.id}`}
+                      href={`/dashboard/collections/${collection.slug}`}
                       className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--color-bg-secondary)]"
                       onClick={() => setQuery("")}
                     >

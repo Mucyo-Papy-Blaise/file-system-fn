@@ -11,8 +11,9 @@ interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  isSuperAdmin: boolean;
-  isAdmin: boolean;
+  isOwner: boolean;
+  isBranchManager: boolean;
+  isDeptManager: boolean;
   isMember: boolean;
   login: (payload: LoginPayload) => Promise<AuthSuccessResponse>;
   register: (payload: RegisterPayload) => Promise<AuthSuccessResponse>;
@@ -84,7 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const response = await authApi.login(payload);
     tokenStorage.set(response.accessToken);
 
-    // Flush so route guards see auth state before navigation finishes.
     flushSync(() => {
       setHasToken(true);
       setUser(response.user ?? null);
@@ -116,8 +116,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       isAuthenticated: hasToken || Boolean(user),
       isLoading,
-      isSuperAdmin: user?.role === Role.SUPER_ADMIN,
-      isAdmin: user?.role === Role.ADMIN,
+      isOwner: user?.role === Role.OWNER,
+      isBranchManager: user?.role === Role.BRANCH_MANAGER,
+      isDeptManager: user?.role === Role.DEPT_MANAGER,
       isMember: user?.role === Role.MEMBER,
       login,
       register,

@@ -1,9 +1,24 @@
-import type { Document } from "./document";
 import type { Folder } from "./folder";
+
+/** Document row returned by global search (includes content snippet, not full extractedText). */
+export interface SearchDocumentHit {
+  id: string;
+  title: string | null;
+  fileName: string;
+  fileUrl: string;
+  documentType?: string | null;
+  concerning?: string | null;
+  summary?: string | null;
+  textSnippet?: string | null;
+  category: { id: string; name: string } | null;
+  folder: { id: string; name: string } | null;
+  uploadedBy: { id: string; email: string; name: string };
+  createdAt: string;
+}
 
 export interface SearchResult {
   documents: {
-    data: Document[];
+    data: SearchDocumentHit[];
     total: number;
     page: number;
   };
@@ -15,6 +30,7 @@ export interface SearchResult {
 
 export interface CollectionSearchResult {
   id: string;
+  slug: string;
   name: string;
   description?: string | null;
   documentCount: number;

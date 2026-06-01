@@ -2,14 +2,15 @@ import { apiClient } from "@/api/api-client";
 import type { ApiSuccessEnvelope } from "@/types/http";
 import type {
   CollectionSearchResult,
+  SearchDocumentHit,
   SearchFilters,
   SearchResult,
 } from "@/types/search";
 import type { Folder } from "@/types/folder";
-import type { Document } from "@/types/document";
 
 type CollectionSearchApiRecord = {
   id: string;
+  slug: string;
   name: string;
   description?: string | null;
   documentCount: number;
@@ -17,7 +18,7 @@ type CollectionSearchApiRecord = {
 
 type SearchApiResponse = {
   documents: {
-    data: Document[];
+    data: SearchDocumentHit[];
     total: number;
     page: number;
   };
@@ -72,6 +73,7 @@ export const searchApi = {
 
     return response.data.map((item) => ({
       id: item.id,
+      slug: item.slug,
       name: item.name,
       description: item.description ?? null,
       documentCount: item.documentCount,

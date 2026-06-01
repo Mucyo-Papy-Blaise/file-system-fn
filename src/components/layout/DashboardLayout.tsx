@@ -7,6 +7,7 @@ import { TopBar } from "./TopBar";
 import { UploadDrawer } from "@/components/upload/UploadDrawer";
 import { useDashboard } from "@/lib/dashboard-context";
 import { useAuth } from "@/lib/auth-context";
+import { cn } from "@/lib/utils";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -20,6 +21,7 @@ export function DashboardLayout({
   const pathname = usePathname();
   const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { isUploadOpen, closeUpload, openUpload, setUploadFolderId, uploadFolderId } = useDashboard();
 
   useEffect(() => {
@@ -33,9 +35,16 @@ export function DashboardLayout({
         pathname={pathname}
         user={user}
         onClose={() => setIsSidebarOpen(false)}
+        collapsed={sidebarCollapsed}
+        onCollapsedChange={setSidebarCollapsed}
       />
 
-      <div className="min-h-screen lg:pl-72">
+      <div
+        className={cn(
+          "min-h-screen transition-[padding] duration-300 ease-out",
+          sidebarCollapsed ? "lg:pl-[68px]" : "lg:pl-72",
+        )}
+      >
         <TopBar
           pageTitle={pageTitle}
           onMenuClick={() => setIsSidebarOpen(true)}

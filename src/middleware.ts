@@ -1,28 +1,29 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from 'next/server';
+import { Role } from '@/types/enum';
 
-const SETUP_COOKIE_NAME = "org_setup_complete";
-const ROLE_COOKIE_CANDIDATES = ["tracker_role", "user_role", "role"];
+const SETUP_COOKIE_NAME = 'org_setup_complete';
+const ROLE_COOKIE_CANDIDATES = ['tracker_role', 'user_role', 'role'];
 const TOKEN_COOKIE_CANDIDATES = [
-  "tracker_token",
-  "accessToken",
-  "access_token",
-  "token",
+  'tracker_token',
+  'accessToken',
+  'access_token',
+  'token',
 ];
 
 function readSetupStatus(request: NextRequest): boolean {
-  return request.cookies.get(SETUP_COOKIE_NAME)?.value === "true";
+  return request.cookies.get(SETUP_COOKIE_NAME)?.value === 'true';
 }
 
 function decodeJwtRole(token: string): string | null {
-  const parts = token.split(".");
+  const parts = token.split('.');
   if (parts.length < 2) {
     return null;
   }
 
   try {
-    const normalizedPayload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const normalizedPayload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     const paddedPayload =
-      normalizedPayload + "=".repeat((4 - (normalizedPayload.length % 4)) % 4);
+      normalizedPayload + '='.repeat((4 - (normalizedPayload.length % 4)) % 4);
     const payload = JSON.parse(atob(paddedPayload)) as {
       role?: string;
     };
@@ -55,29 +56,56 @@ function readRole(request: NextRequest): string | null {
   return null;
 }
 
+function isBlockedRoute(role: string, pathname: string): boolean {
+  if (pathname.startsWith('/dashboard/branches')) {
+    return role !== Role.OWNER;
+  }
+
+  if (pathname.startsWith('/dashboard/departments')) {
+    return role === Role.DEPT_MANAGER || role === Role.MEMBER;
+  }
+
+  if (pathname.startsWith('/dashboard/categories')) {
+    return role === Role.DEPT_MANAGER || role === Role.MEMBER;
+  }
+
+  if (pathname.startsWith('/dashboard/members')) {
+    return role === Role.MEMBER;
+  }
+
+  return false;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const role = readRole(request);
   const isSetupComplete = readSetupStatus(request);
-  const isDashboardRoute = pathname.startsWith("/dashboard");
-  const isSetupRoute = pathname.startsWith("/setup/categories");
-  const isAcceptInvitationRoute = pathname.startsWith("/accept-invitation");
+  const isSetupRoute = pathname.startsWith('/setup/categories');
+  const isAcceptInvitationRoute = pathname.startsWith('/accept-invitation');
 
   if (isAcceptInvitationRoute) {
     return NextResponse.next();
   }
 
-  if (isSetupRoute && role === "MEMBER") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  if (role && isBlockedRoute(role, pathname)) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  if (isSetupRoute && role === "ADMIN" && isSetupComplete) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  if (isSetupRoute && role === Role.MEMBER) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  if (
+    isSetupRoute &&
+    role === Role.BRANCH_MANAGER &&
+    isSetupComplete
+  ) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/setup/categories", "/accept-invitation"],
+  matcher: ['/dashboard/:path*', '/setup/categories', '/accept-invitation'],
 };

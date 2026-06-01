@@ -9,7 +9,7 @@ import {
   useCreateDepartment,
   useDeleteDepartment,
   useGetDepartments,
-  useInviteAdmin,
+  useInviteDeptManager,
   useUpdateDepartment,
 } from "@/lib/hooks/useDepartments";
 import { AddDepartmentModal } from "@/components/departments/AddDepartmentModal";
@@ -24,12 +24,13 @@ import type { Department } from "@/types/department";
 
 export default function DashboardDepartmentsPage() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isOwner, isBranchManager } = useAuth();
   const { departments, isLoading: isDepartmentsLoading, isError } = useGetDepartments();
   const { mutate: createDepartment, isLoading: isCreatingDepartment } = useCreateDepartment();
   const { mutate: updateDepartment, isLoading: isUpdatingDepartment } = useUpdateDepartment();
   const { mutate: deleteDepartment, isLoading: isDeletingDepartment } = useDeleteDepartment();
-  const { mutate: inviteAdmin, isLoading: isInvitingAdmin } = useInviteAdmin();
+  const { mutate: inviteDeptManager, isLoading: isInvitingAdmin } =
+    useInviteDeptManager();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -41,10 +42,10 @@ export default function DashboardDepartmentsPage() {
     isCreatingDepartment || isUpdatingDepartment || isDeletingDepartment || isInvitingAdmin;
 
   useEffect(() => {
-    if (!isLoading && user && user.role !== Role.SUPER_ADMIN) {
+    if (!isLoading && user && !isOwner && !isBranchManager) {
       router.replace("/dashboard");
     }
-  }, [isLoading, router, user]);
+  }, [isBranchManager, isLoading, isOwner, router, user]);
 
   const handleAddDepartment = (name: string) => {
     createDepartment({ name }, {
@@ -62,7 +63,7 @@ export default function DashboardDepartmentsPage() {
     if (!selectedDepartment) return;
 
     updateDepartment(
-      { id: selectedDepartment.id, data: { name } },
+      { slug: selectedDepartment.slug, data: { name } },
       {
         onSuccess: () => {
           toast.success("Department updated successfully");
@@ -78,7 +79,7 @@ export default function DashboardDepartmentsPage() {
   const handleDeleteDepartment = async () => {
     if (!selectedDepartment) return;
 
-    deleteDepartment(selectedDepartment.id, {
+    deleteDepartment(selectedDepartment.slug, {
       onSuccess: () => {
         toast.success("Department deleted successfully");
       },
@@ -90,17 +91,20 @@ export default function DashboardDepartmentsPage() {
     setIsDeleteModalOpen(false);
   };
 
-  const handleInviteAdmin = (data: { email: string }) => {
+  const handleInviteDeptManager = (data: { email: string }) => {
     if (!selectedDepartment) return;
 
-    inviteAdmin(
-      { id: selectedDepartment.id, data },
+    inviteDeptManager(
+      { slug: selectedDepartment.slug, data },
       {
         onSuccess: () => {
-          toast.success("Admin invitation sent successfully");
+          toast.success("Department manager invitation sent successfully");
         },
         onError: (error) => {
-          const message = error instanceof Error ? error.message : "Unable to send admin invite.";
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Unable to send department manager invite.";
           toast.error(message);
         },
       },
@@ -132,7 +136,7 @@ export default function DashboardDepartmentsPage() {
           </div>
           <LoadingSkeleton width={140} height={44} rounded="1.5rem" />
         </div>
-        <div className="rounded-3xl border border-default bg-surface p-6">
+        <div className="rounded border border-default bg-surface p-6">
           {[...Array(4)].map((index) => (
             <div key={index} className="grid gap-4 md:grid-cols-[2.5fr_1fr_1fr_1fr_auto] py-4">
               <LoadingSkeleton width="100%" height={20} />
@@ -290,7 +294,7 @@ export default function DashboardDepartmentsPage() {
         key={`invite-${selectedDepartment?.id ?? "none"}-${isInviteModalOpen}`}
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
-        onConfirm={handleInviteAdmin}
+        onConfirm={handleInviteDeptManager}
         isSubmitting={isInvitingAdmin}
       />
       <DeleteConfirmationModal

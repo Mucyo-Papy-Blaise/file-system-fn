@@ -18,7 +18,7 @@ function getButtonClassName(isActive: boolean) {
 
 export function SortBar({ sortBy, onChange }: SortBarProps) {
   return (
-    <div className="flex flex-col gap-3 rounded border border-default bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
         <span className="text-sm font-medium text-foreground">Sort by Name</span>
         <div className="flex items-center gap-2">

@@ -3,11 +3,27 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { Role } from "@/types/enum";
 
 const AUTH_PAGES = new Set(["/login", "/register"]);
 
+const ROUTE_ROLE_ACCESS: Record<string, Role[]> = {
+  "/dashboard/branches": [Role.OWNER],
+  "/dashboard/departments": [Role.OWNER, Role.BRANCH_MANAGER],
+  "/dashboard/categories": [Role.OWNER, Role.BRANCH_MANAGER],
+  "/dashboard/members": [Role.OWNER, Role.BRANCH_MANAGER, Role.DEPT_MANAGER],
+};
+
+function getRequiredRoles(pathname: string): Role[] | null {
+  const match = Object.entries(ROUTE_ROLE_ACCESS).find(([route]) =>
+    pathname === route || pathname.startsWith(`${route}/`),
+  );
+  return match ? match[1] : null;
+}
+
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user, isOwner, isBranchManager, isDeptManager, isMember } =
+    useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -23,8 +39,38 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
     if (!isAuthenticated && pathname.startsWith("/dashboard")) {
       router.replace("/login");
+      return;
     }
-  }, [isAuthenticated, isLoading, pathname, router]);
+
+    if (!isAuthenticated || !user) {
+      return;
+    }
+
+    const requiredRoles = getRequiredRoles(pathname);
+    if (!requiredRoles) {
+      return;
+    }
+
+    const hasAccess =
+      (isOwner && requiredRoles.includes(Role.OWNER)) ||
+      (isBranchManager && requiredRoles.includes(Role.BRANCH_MANAGER)) ||
+      (isDeptManager && requiredRoles.includes(Role.DEPT_MANAGER)) ||
+      (isMember && requiredRoles.includes(Role.MEMBER));
+
+    if (!hasAccess) {
+      router.replace("/dashboard");
+    }
+  }, [
+    isAuthenticated,
+    isLoading,
+    pathname,
+    router,
+    user,
+    isOwner,
+    isBranchManager,
+    isDeptManager,
+    isMember,
+  ]);
 
   if (isLoading) {
     return (

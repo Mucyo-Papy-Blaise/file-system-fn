@@ -4,10 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { folderApi } from "@/api/folder.api";
 import type { CreateFolderInput, FolderContents, Folder, UpdateFolderInput } from "@/types/folder";
 
-export function useGetRootFolders(options?: { mine?: boolean }) {
+export function useGetRootFolders(options?: { mine?: boolean; enabled?: boolean }) {
   const query = useQuery({
     queryKey: ["folders", options?.mine ?? false],
     queryFn: () => folderApi.getRootFolders(options),
+    enabled: options?.enabled ?? true,
   });
 
   return {
@@ -17,11 +18,11 @@ export function useGetRootFolders(options?: { mine?: boolean }) {
   };
 }
 
-export function useGetFolderContents(id: string | null, options?: { mine?: boolean }) {
+export function useGetFolderContents(slug: string | null, options?: { mine?: boolean }) {
   const query = useQuery({
-    queryKey: ["folders", id, options?.mine ?? false],
-    queryFn: () => folderApi.getFolderContents(id ?? "", options),
-    enabled: Boolean(id),
+    queryKey: ["folders", slug, options?.mine ?? false],
+    queryFn: () => folderApi.getFolderContents(slug ?? "", options),
+    enabled: Boolean(slug),
   });
 
   return {
@@ -50,8 +51,8 @@ export function useCreateFolder() {
 export function useUpdateFolder() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateFolderInput }) =>
-      folderApi.updateFolder(id, data),
+    mutationFn: ({ slug, data }: { slug: string; data: UpdateFolderInput }) =>
+      folderApi.updateFolder(slug, data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["folders"] });
     },
@@ -67,7 +68,7 @@ export function useUpdateFolder() {
 export function useDeleteFolder() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (id: string) => folderApi.deleteFolder(id),
+    mutationFn: (slug: string) => folderApi.deleteFolder(slug),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["folders"] });
     },

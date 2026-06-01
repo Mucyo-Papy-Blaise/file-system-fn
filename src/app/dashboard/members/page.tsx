@@ -9,13 +9,14 @@ import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { useAuth } from "@/lib/auth-context";
 import { useGetInvitations } from "@/lib/hooks/useInvitations";
 import { useGetDepartments } from "@/lib/hooks/useDepartments";
+import { useGetBranches } from "@/lib/hooks/useBranches";
 import type { Member } from "@/types/member";
 import { InvitationStatus, Role } from "@/types/enum";
 import { toast } from "sonner";
 
 export default function DashboardMembersPage() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isMember } = useAuth();
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isLoadingTable, setIsLoadingTable] = useState(true);
   const [removedMemberIds, setRemovedMemberIds] = useState<string[]>([]);
@@ -27,21 +28,29 @@ export default function DashboardMembersPage() {
     InvitationStatus.ACCEPTED,
   );
   const { departments } = useGetDepartments();
+  const { branches } = useGetBranches();
 
   const acceptedMembers = useMemo<Member[]>(
     () =>
       acceptedInvitations.map((invitation) => {
         const dept = departments.find((d) => d.id === invitation.departmentId);
+        const branch = invitation.branchId
+          ? branches.find((b) => b.id === invitation.branchId) ??
+            (dept?.branch ? { id: dept.branch.id, name: dept.branch.name } : null)
+          : dept?.branch
+            ? { id: dept.branch.id, name: dept.branch.name }
+            : null;
         return {
           id: invitation.id,
           name: invitation.email,
           email: invitation.email,
           role: invitation.role,
+          branch: branch ? { id: branch.id, name: branch.name } : null,
           department: dept ? { id: dept.id, name: dept.name } : null,
           createdAt: new Date(invitation.createdAt).toLocaleDateString(),
         } as Member;
       }),
-    [acceptedInvitations, departments],
+    [acceptedInvitations, branches, departments],
   );
 
   const members = useMemo(
@@ -56,10 +65,10 @@ export default function DashboardMembersPage() {
   );
 
   useEffect(() => {
-    if (!isLoading && user?.role === Role.MEMBER) {
+    if (!isLoading && isMember) {
       router.replace("/dashboard");
     }
-  }, [isLoading, router, user]);
+  }, [isLoading, isMember, router]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setIsLoadingTable(false), 500);
@@ -69,7 +78,8 @@ export default function DashboardMembersPage() {
   const handleChangeRole = (memberId: string) => {
     setRoleOverrides((prev) => ({
       ...prev,
-      [memberId]: prev[memberId] === Role.ADMIN ? Role.MEMBER : Role.ADMIN,
+      [memberId]:
+        prev[memberId] === Role.DEPT_MANAGER ? Role.MEMBER : Role.DEPT_MANAGER,
     }));
     toast.success("Member role updated");
   };

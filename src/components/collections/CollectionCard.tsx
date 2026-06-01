@@ -27,8 +27,11 @@ export function CollectionCard({
   onDelete,
 }: CollectionCardProps) {
   const isCreator = currentUser?.id === collection.createdBy.id;
-  const isAdmin = currentUser?.role === Role.ADMIN;
-  const canModify = isCreator || isAdmin;
+  const canManageScope =
+    currentUser?.role === Role.OWNER ||
+    currentUser?.role === Role.BRANCH_MANAGER ||
+    currentUser?.role === Role.DEPT_MANAGER;
+  const canModify = isCreator || canManageScope;
 
   const handleMenuClick = (e: ReactMouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -57,7 +60,7 @@ export function CollectionCard({
         </div>
         <div className="min-w-0">
           <Link
-            href={`/dashboard/collections/${collection.id}`}
+            href={`/dashboard/collections/${collection.slug}`}
             className="block truncate text-sm font-semibold text-foreground transition hover:text-primary"
           >
             {collection.name}

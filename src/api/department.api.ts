@@ -3,7 +3,7 @@ import type { ApiSuccessEnvelope } from "@/types/http";
 import type {
   Department,
   CreateDepartmentInput,
-  InviteAdminInput,
+  InviteDeptManagerInput,
   UpdateDepartmentInput,
 } from "@/types/department";
 
@@ -31,26 +31,32 @@ export const departmentApi = {
     return response.data.data.map(normalizeDepartment);
   },
 
-  async getDepartmentById(id: string): Promise<Department> {
+  async getDepartmentBySlug(slug: string): Promise<Department> {
     const response = await apiClient.get<ApiSuccessEnvelope<DepartmentApiRecord>>(
-      `/departments/${encodeURIComponent(id)}`,
+      `/departments/${encodeURIComponent(slug)}`,
     );
     return normalizeDepartment(response.data);
   },
 
-  async updateDepartment(id: string, data: UpdateDepartmentInput): Promise<Department> {
+  async updateDepartment(slug: string, data: UpdateDepartmentInput): Promise<Department> {
     const response = await apiClient.patch<
       ApiSuccessEnvelope<DepartmentApiRecord>,
       UpdateDepartmentInput
-    >(`/departments/${encodeURIComponent(id)}`, data);
+    >(`/departments/${encodeURIComponent(slug)}`, data);
     return normalizeDepartment(response.data);
   },
 
-  async deleteDepartment(id: string): Promise<void> {
-    await apiClient.delete<void>(`/departments/${encodeURIComponent(id)}`);
+  async deleteDepartment(slug: string): Promise<void> {
+    await apiClient.delete<void>(`/departments/${encodeURIComponent(slug)}`);
   },
 
-  async inviteAdmin(id: string, data: InviteAdminInput): Promise<void> {
-    await apiClient.post<void>(`/departments/${encodeURIComponent(id)}/invite-admin`, data);
+  async inviteDeptManager(
+    slug: string,
+    data: InviteDeptManagerInput,
+  ): Promise<void> {
+    await apiClient.post<void>(
+      `/departments/${encodeURIComponent(slug)}/invite-dept-manager`,
+      data,
+    );
   },
 };

@@ -56,7 +56,7 @@ type FolderContentsResponseEnvelope = ApiSuccessEnvelope<
   FolderApiRecord & {
     children: FolderApiRecord[];
     documents: DocumentApiRecord[];
-    breadcrumb: Array<{ id: string; name: string }>;
+    breadcrumb: Array<{ id: string; name: string; slug: string }>;
   }
 >;
 
@@ -132,10 +132,10 @@ export const folderApi = {
     return response.data.map(normalizeFolder);
   },
 
-  async getFolderContents(id: string, options?: { mine?: boolean }): Promise<FolderContents> {
+  async getFolderContents(slug: string, options?: { mine?: boolean }): Promise<FolderContents> {
     const query = options?.mine ? '?mine=true' : '';
     const response = await apiClient.get<FolderContentsResponseEnvelope>(
-      `/folders/${id}${query}`,
+      `/folders/${encodeURIComponent(slug)}${query}`,
     );
     const payload = response.data;
 
@@ -147,18 +147,18 @@ export const folderApi = {
     };
   },
 
-  async updateFolder(id: string, data: UpdateFolderInput): Promise<Folder> {
+  async updateFolder(slug: string, data: UpdateFolderInput): Promise<Folder> {
     const response = await apiClient.patch<ApiSuccessEnvelope<FolderApiRecord>>(
-      `/folders/${id}`,
+      `/folders/${encodeURIComponent(slug)}`,
       data,
     );
 
     return normalizeFolder(response.data);
   },
 
-  async deleteFolder(id: string): Promise<Folder> {
+  async deleteFolder(slug: string): Promise<Folder> {
     const response = await apiClient.delete<ApiSuccessEnvelope<FolderApiRecord>>(
-      `/folders/${id}`,
+      `/folders/${encodeURIComponent(slug)}`,
     );
 
     return normalizeFolder(response.data);

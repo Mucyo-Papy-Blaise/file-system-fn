@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
+import { AppSelect } from "@/components/ui/AppSelect";
 import { MoveFolderModal } from "./MoveFolderModal";
 import { useDeleteDocument, useRenameDocument, useConfirmDocument } from "@/lib/hooks/useDocuments";
 import { useGetCategories } from "@/lib/hooks/useCategories";
@@ -186,16 +187,22 @@ export function UnsortedDocumentCard({ document }: InboxDocumentCardProps) {
 
             <div className="rounded-3xl border border-default bg-[var(--color-bg-secondary)] p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-secondary">Category</p>
-              <select
-                value={local.categoryId ?? ''}
-                onChange={(e) => handleLocalChange('categoryId', e.target.value || null)}
-                className="mt-2 w-full rounded-2xl border border-default bg-surface px-3 py-2 text-sm text-foreground outline-none"
-              >
-                <option value="">Select category</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              <AppSelect
+                className="mt-2"
+                value={local.categoryId ?? ""}
+                onValueChange={(value) =>
+                  handleLocalChange("categoryId", value || null)
+                }
+                placeholder="Select category"
+                triggerClassName="rounded-2xl bg-surface"
+                options={[
+                  { value: "", label: "Select category" },
+                  ...categories.map((c) => ({
+                    value: c.id,
+                    label: c.name,
+                  })),
+                ]}
+              />
             </div>
 
             <div className="sm:col-span-2 rounded-3xl border border-default bg-[var(--color-bg-secondary)] p-4">

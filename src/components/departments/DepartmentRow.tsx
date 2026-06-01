@@ -1,7 +1,7 @@
 "use client";
 
 import type { Department } from "@/types/department";
-import { useGetDepartmentById } from "@/lib/hooks/useDepartments";
+import { useGetDepartmentBySlug } from "@/lib/hooks/useDepartments";
 import { Role } from "@/types/enum";
 
 interface DepartmentRowProps {
@@ -48,7 +48,7 @@ export function DepartmentRow({
           </button>
           {/* fetch department details to determine if an admin already exists */}
           <DepartmentAdminAction
-            departmentId={department.id}
+            departmentSlug={department.slug}
             onInvite={onInviteAdmin}
             isBusy={isBusy}
           />
@@ -67,17 +67,17 @@ export function DepartmentRow({
 }
 
 function DepartmentAdminAction({
-  departmentId,
+  departmentSlug,
   onInvite,
   isBusy,
 }: {
-  departmentId: string;
+  departmentSlug: string;
   onInvite: () => void;
   isBusy?: boolean;
 }) {
-  const { department: deptDetail, isLoading } = useGetDepartmentById(departmentId);
+  const { department: deptDetail, isLoading } = useGetDepartmentBySlug(departmentSlug);
 
-  const admin = deptDetail?.members?.find((u) => u.role === Role.ADMIN);
+  const manager = deptDetail?.members?.find((u) => u.role === Role.DEPT_MANAGER);
 
   if (isLoading) {
     return (
@@ -91,15 +91,15 @@ function DepartmentAdminAction({
     );
   }
 
-  if (admin) {
+  if (manager) {
     return (
       <button
         type="button"
         disabled
         className="rounded-full border border-default bg-surface px-3 py-2 text-xs font-semibold text-foreground/80"
-        title={`Admin: ${admin.name ?? admin.email}`}
+        title={`Manager: ${manager.name ?? manager.email}`}
       >
-        Admin: {admin.name ?? admin.email}
+        Manager: {manager.name ?? manager.email}
       </button>
     );
   }
@@ -111,7 +111,7 @@ function DepartmentAdminAction({
       disabled={isBusy}
       className="rounded-full border border-default bg-surface px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
     >
-      Invite Admin
+      Invite Manager
     </button>
   );
 }

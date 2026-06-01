@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { FolderWorkspace } from "@/components/folders/FolderWorkspace";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { useAuth } from "@/lib/auth-context";
@@ -9,7 +10,7 @@ export default function FoldersPage() {
 
   if (isLoading || !user) {
     return (
-      <div className="space-y-6 p-6">
+      <div className="space-y-6">
         <div className="space-y-3">
           <LoadingSkeleton width={260} height={32} />
           <LoadingSkeleton width="50%" height={16} />
@@ -32,11 +33,13 @@ export default function FoldersPage() {
   }
 
   return (
-    <FolderWorkspace
-      title="Folders"
-      description="Browse every folder and document uploaded across the company."
-      currentUser={user}
-      onlyMine={false}
-    />
+    <Suspense fallback={<LoadingSkeleton height={320} rounded="1.5rem" />}>
+      <FolderWorkspace
+        title="Folders"
+        description="Browse company folders and documents. View and download only — uploads and edits happen in My Folders."
+        currentUser={user}
+        readOnly
+      />
+    </Suspense>
   );
 }

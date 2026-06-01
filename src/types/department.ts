@@ -1,10 +1,15 @@
-import type { Member } from "./member";
+import type { Member } from './member';
 
 export interface Department {
   id: string;
   name: string;
   slug: string;
   organizationId: string;
+  branchId?: string;
+  branch?: {
+    id: string;
+    name: string;
+  };
   createdBy: {
     id: string;
     name: string;
@@ -18,12 +23,16 @@ export interface Department {
 
 export interface CreateDepartmentInput {
   name: string;
+  branchId?: string;
 }
 
 export interface UpdateDepartmentInput {
   name: string;
 }
 
-export interface InviteAdminInput {
+export interface InviteDeptManagerInput {
   email: string;
 }
+
+/** @deprecated Use InviteDeptManagerInput */
+export type InviteAdminInput = InviteDeptManagerInput;

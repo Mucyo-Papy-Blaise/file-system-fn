@@ -5,7 +5,7 @@ import { departmentApi } from "@/api/department.api";
 import type {
   CreateDepartmentInput,
   Department,
-  InviteAdminInput,
+  InviteDeptManagerInput,
   UpdateDepartmentInput,
 } from "@/types/department";
 
@@ -23,11 +23,11 @@ export function useGetDepartments() {
   };
 }
 
-export function useGetDepartmentById(id: string) {
+export function useGetDepartmentBySlug(slug: string) {
   const query = useQuery({
-    queryKey: ["departments", id],
-    queryFn: () => departmentApi.getDepartmentById(id),
-    enabled: !!id,
+    queryKey: ["departments", slug],
+    queryFn: () => departmentApi.getDepartmentBySlug(slug),
+    enabled: !!slug,
   });
 
   return {
@@ -59,8 +59,8 @@ export function useCreateDepartment() {
 export function useUpdateDepartment() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateDepartmentInput }) =>
-      departmentApi.updateDepartment(id, data),
+    mutationFn: ({ slug, data }: { slug: string; data: UpdateDepartmentInput }) =>
+      departmentApi.updateDepartment(slug, data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["departments"] });
     },
@@ -78,7 +78,7 @@ export function useUpdateDepartment() {
 export function useDeleteDepartment() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (id: string) => departmentApi.deleteDepartment(id),
+    mutationFn: (slug: string) => departmentApi.deleteDepartment(slug),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["departments"] });
     },
@@ -93,11 +93,11 @@ export function useDeleteDepartment() {
   };
 }
 
-export function useInviteAdmin() {
+export function useInviteDeptManager() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: InviteAdminInput }) =>
-      departmentApi.inviteAdmin(id, data),
+    mutationFn: ({ slug, data }: { slug: string; data: InviteDeptManagerInput }) =>
+      departmentApi.inviteDeptManager(slug, data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["departments"] });
     },

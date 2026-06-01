@@ -5,6 +5,7 @@ export interface Stats {
   totalDepartments?: number;
   totalCategories?: number;
   totalCollections: number;
+  totalBranches?: number;
   pendingInbox: number;
 }
 

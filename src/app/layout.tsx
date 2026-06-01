@@ -15,9 +15,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tracker System",
-  description: "Tracker frontend app",
+  title: "File-Vault System",
+  description: "File-Vault frontend app",
+  icons: "/file-browser-icon.png",
 };
+
+
+
 
 export default function RootLayout({
   children,

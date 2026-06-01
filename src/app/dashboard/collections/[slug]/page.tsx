@@ -6,7 +6,7 @@ import { ArrowLeft, Plus, MoreHorizontal, Trash } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import {
-  useGetCollectionById,
+  useGetCollectionBySlug,
   useRemoveDocument,
 } from "@/lib/hooks/useCollections";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -23,10 +23,10 @@ import type { SortOption } from "@/types/document";
 export default function CollectionDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const collectionId = params.id as string;
+  const collectionSlug = typeof params.slug === "string" ? params.slug : "";
 
   const { user, isLoading: isAuthLoading } = useAuth();
-  const { collection, isLoading } = useGetCollectionById(collectionId);
+  const { collection, isLoading } = useGetCollectionBySlug(collectionSlug);
   const removeDocument = useRemoveDocument();
 
   const [isAddDocumentModalOpen, setIsAddDocumentModalOpen] = useState(false);
@@ -107,8 +107,11 @@ export default function CollectionDetailPage() {
   }
 
   const isCreator = user.id === collection.createdBy.id;
-  const isAdmin = user.role === Role.ADMIN;
-  const canModify = isCreator || isAdmin;
+  const canManageScope =
+    user.role === Role.OWNER ||
+    user.role === Role.BRANCH_MANAGER ||
+    user.role === Role.DEPT_MANAGER;
+  const canModify = isCreator || canManageScope;
 
   const removingDocument = sortedDocuments.find((d) => d.id === removingDocumentId);
 
@@ -118,7 +121,7 @@ export default function CollectionDetailPage() {
     try {
       await removeDocument.mutate(
         {
-          collectionId: collection.id,
+          collectionSlug: collection.slug,
           documentId: removingDocumentId,
         },
         {
@@ -131,7 +134,7 @@ export default function CollectionDetailPage() {
           },
         },
       );
-    } catch (error) {
+    } catch {
       toast.error("Failed to remove document");
     }
   };

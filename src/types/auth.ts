@@ -1,5 +1,5 @@
-import { Role } from "./enum";
-import { OrganizationType } from "./enum";
+import { Role } from './enum';
+import { OrganizationType } from './enum';
 
 export interface User {
   id: string;
@@ -14,6 +14,7 @@ export interface AuthUser {
   email: string;
   role: Role;
   organizationId: string;
+  branchId?: string | null;
   departmentId?: string | null;
   organizationName?: string | null;
   organizationLogo?: string | null;
@@ -35,7 +36,7 @@ export interface LoginPayload {
 
 export interface RegisterPayload {
   organizationName: string;
-  type: OrganizationType
+  type: OrganizationType;
   name: string;
   email: string;
   password: string;

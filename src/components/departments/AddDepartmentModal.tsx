@@ -50,7 +50,7 @@ export function AddDepartmentModal({
             type="button"
             onClick={handleClose}
             disabled={isSubmitting}
-            className="rounded-2xl border border-default bg-background px-4 py-3 text-sm font-semibold text-secondary transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded border border-default bg-background px-4 py-3 text-sm font-semibold text-secondary transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel
           </button>
@@ -58,7 +58,7 @@ export function AddDepartmentModal({
             type="button"
             onClick={() => void handleConfirm()}
             disabled={!departmentName.trim() || isSubmitting}
-            className="rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting ? "Creating..." : "Create Department"}
           </button>

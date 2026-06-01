@@ -53,7 +53,7 @@ export function AddDocumentModal({
     try {
       await addDocument.mutate(
         {
-          collectionId: collection.id,
+          collectionSlug: collection.slug,
           documentId: selectedDocumentId,
         },
         {

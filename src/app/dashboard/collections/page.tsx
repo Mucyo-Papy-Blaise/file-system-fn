@@ -10,6 +10,7 @@ import { CollectionCard } from "@/components/collections/CollectionCard";
 import { CreateCollectionModal } from "@/components/collections/CreateCollectionModal";
 import { EditCollectionModal } from "@/components/collections/EditCollectionModal";
 import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
+import { AppSelect } from "@/components/ui/AppSelect";
 import { toast } from "sonner";
 import type { Collection } from "@/types/collection";
 import { Role } from "@/types/enum";
@@ -29,8 +30,9 @@ export default function CollectionsPage() {
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [deletingCollection, setDeletingCollection] = useState<Collection | null>(null);
 
-  const isAdmin = user?.role === Role.ADMIN;
-  const userCollections = isAdmin
+  const canViewAll =
+    user?.role === Role.OWNER || user?.role === Role.BRANCH_MANAGER;
+  const userCollections = canViewAll
     ? collections
     : collections.filter((c) => c.createdBy.id === user?.id);
 
@@ -130,7 +132,7 @@ export default function CollectionsPage() {
     if (!deletingCollection) return;
 
     try {
-      await deleteCollection.mutate(deletingCollection.id, {
+      await deleteCollection.mutate(deletingCollection.slug, {
         onSuccess: () => {
           toast.success("Collection deleted successfully");
           setDeletingCollection(null);
@@ -175,37 +177,38 @@ export default function CollectionsPage() {
             />
           </div>
 
-          {isAdmin ? (
+          {canViewAll ? (
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-secondary" />
-              <select
+              <AppSelect
+                className="flex-1"
                 value={filters.ownerId}
-                onChange={(event) => handleOwnerFilter(event.target.value || undefined)}
-                className="flex-1 rounded border border-default bg-[var(--color-bg-secondary)] px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
-              >
-                <option value="">All owners</option>
-                {ownerOptions.map((owner) => (
-                  <option key={owner.id} value={owner.id}>
-                    {owner.name}
-                  </option>
-                ))}
-              </select>
+                onValueChange={(value) => handleOwnerFilter(value || undefined)}
+                placeholder="All owners"
+                triggerClassName="rounded-xl"
+                options={[
+                  { value: "", label: "All owners" },
+                  ...ownerOptions.map((owner) => ({
+                    value: owner.id,
+                    label: owner.name,
+                  })),
+                ]}
+              />
             </div>
           ) : null}
 
           <div className="flex flex-col gap-2 text-sm text-secondary sm:flex-row sm:items-center sm:justify-end">
             <span>Page size</span>
-            <select
-              value={filters.limit}
-              onChange={(event) => handlePageSizeChange(Number(event.target.value))}
-              className="rounded border border-default bg-[var(--color-bg-secondary)] px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
-            >
-              {[10, 20, 50].map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+            <AppSelect
+              value={String(filters.limit)}
+              onValueChange={(value) => handlePageSizeChange(Number(value))}
+              placeholder="Page size"
+              triggerClassName="rounded-xl min-w-[5rem]"
+              options={[10, 20, 50].map((option) => ({
+                value: String(option),
+                label: String(option),
+              }))}
+            />
           </div>
         </div>
 

@@ -41,12 +41,14 @@ export interface FolderContents {
   folder: Folder;
   children: Folder[];
   documents: Document[];
-  breadcrumb: Array<{ id: string; name: string }>;
+  breadcrumb: Array<{ id: string; name: string; slug: string }>;
 }
 
 export interface CreateFolderInput {
   name: string;
   parentId?: string | null;
+  branchId?: string;
+  departmentId?: string;
 }
 
 export interface UpdateFolderInput {

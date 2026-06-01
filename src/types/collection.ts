@@ -1,9 +1,13 @@
 import type { Document } from "./document";
+import type { SharedLevel } from "./shared-space";
 
 export interface Collection {
   id: string;
+  slug: string;
   name: string;
   description?: string | null;
+  isShared: boolean;
+  level?: SharedLevel | null;
   createdAt: string;
   updatedAt: string;
   createdBy: {
@@ -18,6 +22,15 @@ export interface Collection {
 export interface CreateCollectionInput {
   name: string;
   description?: string;
+  isShared?: boolean;
+  level?: SharedLevel;
+  branchId?: string;
+  departmentId?: string;
+}
+
+export interface CollectionsListResult {
+  private: Collection[];
+  shared: Collection[];
 }
 
 export interface UpdateCollectionInput {

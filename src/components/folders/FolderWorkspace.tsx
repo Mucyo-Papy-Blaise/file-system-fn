@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  Eye,
+  FolderOpen,
   FolderPlus,
-  FolderSearch,
+  Lock,
   Plus,
   Upload as UploadIcon,
 } from "lucide-react";
@@ -27,6 +30,11 @@ import {
 } from "@/lib/hooks/useFolders";
 import type { AuthUser } from "@/types/auth";
 import type { SortOption } from "@/types/document";
+import { FolderScopeFields } from "@/components/folders/FolderScopeFields";
+import {
+  ALL_SCOPE_VALUE,
+  toScopeApiValue,
+} from "@/lib/shared-scope-utils";
 import { Role } from "@/types/enum";
 
 interface FolderWorkspaceProps {
@@ -34,6 +42,8 @@ interface FolderWorkspaceProps {
   description: string;
   currentUser: AuthUser;
   onlyMine?: boolean;
+  /** Company-wide browse: view and download only */
+  readOnly?: boolean;
 }
 
 const NEW_FOLDER_ID = "pending-new-folder";
@@ -64,9 +74,30 @@ export function FolderWorkspace({
   description,
   currentUser,
   onlyMine = false,
+  readOnly = false,
 }: FolderWorkspaceProps) {
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentFolderSlug = searchParams.get("folder");
   const [pendingFolderId, setPendingFolderId] = useState<string | null>(null);
+  const [folderBranchId, setFolderBranchId] = useState(ALL_SCOPE_VALUE);
+  const [folderDepartmentId, setFolderDepartmentId] = useState(ALL_SCOPE_VALUE);
+  const isOwner = currentUser.role === Role.OWNER;
+
+  const updateFolderSlug = useCallback(
+    (slug: string | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (slug) {
+        params.set("folder", slug);
+      } else {
+        params.delete("folder");
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
   const [sortBy, setSortBy] = useState<SortOption>("date_desc");
   const { openUpload, setUploadFolderId } = useDashboard();
 
@@ -79,7 +110,7 @@ export function FolderWorkspace({
     folderContents,
     isLoading: isContentsLoading,
     isError: isContentsError,
-  } = useGetFolderContents(currentFolderId, { mine: onlyMine });
+  } = useGetFolderContents(currentFolderSlug, { mine: onlyMine });
 
   const { mutate: createFolder } = useCreateFolder();
   const { mutate: updateFolder } = useUpdateFolder();
@@ -87,32 +118,38 @@ export function FolderWorkspace({
   const { mutate: updateDocument } = useUpdateDocument();
   const { mutate: deleteDocument } = useDeleteDocument();
 
-  const isLoading = currentFolderId ? isContentsLoading : isRootLoading;
-  const isError = currentFolderId ? isContentsError : isRootError;
-  const isAdmin = currentUser.role === Role.ADMIN;
-  const showDepartmentColumn = currentUser.role === Role.SUPER_ADMIN;
-  const isInFolder = currentFolderId !== null;
-  const showActions = onlyMine;
+  const isLoading = currentFolderSlug ? isContentsLoading : isRootLoading;
+  const isError = currentFolderSlug ? isContentsError : isRootError;
+  const showDepartmentColumn = currentUser.role === Role.OWNER;
+  const isInFolder = currentFolderSlug !== null;
+  const currentFolderDbId = folderContents?.folder?.id ?? null;
+  const canManage = onlyMine && !readOnly;
 
   const breadcrumbPath = useMemo(() => {
     const rootItem = { id: "root", name: title };
 
-    if (!currentFolderId) {
+    if (!currentFolderSlug) {
       return [rootItem];
     }
 
-    return [rootItem, ...(folderContents?.breadcrumb ?? [])];
-  }, [currentFolderId, folderContents?.breadcrumb, title]);
+    return [
+      rootItem,
+      ...(folderContents?.breadcrumb ?? []).map((item) => ({
+        id: item.slug,
+        name: item.name,
+      })),
+    ];
+  }, [currentFolderSlug, folderContents?.breadcrumb, title]);
 
   const currentFolderName =
     breadcrumbPath[breadcrumbPath.length - 1]?.name ?? title;
   const folders = useMemo(
-    () => currentFolderId ? (folderContents?.children ?? []) : rootFolders,
-    [currentFolderId, folderContents?.children, rootFolders],
+    () => (currentFolderSlug ? (folderContents?.children ?? []) : rootFolders),
+    [currentFolderSlug, folderContents?.children, rootFolders],
   );
   const documents = useMemo(
-    () => (currentFolderId ? (folderContents?.documents ?? []) : []),
-    [currentFolderId, folderContents?.documents],
+    () => (currentFolderSlug ? (folderContents?.documents ?? []) : []),
+    [currentFolderSlug, folderContents?.documents],
   );
 
   const placeholderFolder = useMemo(
@@ -122,7 +159,7 @@ export function FolderWorkspace({
             id: NEW_FOLDER_ID,
             name: "New Folder",
             slug: "new-folder",
-            parentId: currentFolderId,
+            parentId: currentFolderDbId,
             organizationId: currentUser.organizationId,
             itemCount: 0,
             createdAt: new Date().toISOString(),
@@ -130,7 +167,7 @@ export function FolderWorkspace({
             createdBy: { id: currentUser.id, name: currentUser.name },
           }
         : null,
-    [pendingFolderId, currentFolderId, currentUser.organizationId, currentUser.id, currentUser.name],
+    [pendingFolderId, currentFolderDbId, currentUser.organizationId, currentUser.id, currentUser.name],
   );
 
   const visibleFolders = useMemo(
@@ -186,23 +223,32 @@ export function FolderWorkspace({
   const hasContent = visibleFolders.length > 0 || documents.length > 0;
 
   useEffect(() => {
-    setUploadFolderId(currentFolderId);
-  }, [currentFolderId, setUploadFolderId]);
+    setUploadFolderId(currentFolderDbId);
+  }, [currentFolderDbId, setUploadFolderId]);
 
-  const handleUploadDocument = (folderId?: string | null) => {
-    openUpload(folderId ?? currentFolderId);
-  };
-
-  const handleNavigateToFolder = (folderId: string) => {
-    setCurrentFolderId(folderId === "root" ? null : folderId);
-  };
-
-  const handleOpenFolder = (folderId: string) => {
-    if (folderId === pendingFolderId) {
+  const handleUploadDocument = (folderSlug?: string | null) => {
+    if (!folderSlug) {
+      openUpload(currentFolderDbId);
       return;
     }
 
-    setCurrentFolderId(folderId);
+    const match =
+      folders.find((folder) => folder.slug === folderSlug) ??
+      (folderContents?.children ?? []).find((folder) => folder.slug === folderSlug);
+
+    openUpload(match?.id ?? currentFolderDbId);
+  };
+
+  const handleNavigateToFolder = (folderSlug: string) => {
+    updateFolderSlug(folderSlug === "root" ? null : folderSlug);
+  };
+
+  const handleOpenFolder = (folderSlug: string) => {
+    if (pendingFolderId) {
+      return;
+    }
+
+    updateFolderSlug(folderSlug);
   };
 
   const handleStartNewFolder = () => {
@@ -210,16 +256,32 @@ export function FolderWorkspace({
       return;
     }
 
+    setFolderBranchId(ALL_SCOPE_VALUE);
+    setFolderDepartmentId(ALL_SCOPE_VALUE);
     setPendingFolderId(NEW_FOLDER_ID);
   };
 
+  const showRootFolderScope =
+    Boolean(pendingFolderId) && isOwner && !currentFolderDbId;
+
   const handleCreateFolder = (name: string) => {
     createFolder(
-      { name, parentId: currentFolderId },
+      {
+        name,
+        parentId: currentFolderDbId,
+        ...(showRootFolderScope
+          ? {
+              branchId: toScopeApiValue(folderBranchId),
+              departmentId: toScopeApiValue(folderDepartmentId),
+            }
+          : {}),
+      },
       {
         onSuccess: () => {
           toast.success("Folder created successfully");
           setPendingFolderId(null);
+          setFolderBranchId(ALL_SCOPE_VALUE);
+          setFolderDepartmentId(ALL_SCOPE_VALUE);
         },
         onError: (error) => {
           toast.error(
@@ -230,13 +292,13 @@ export function FolderWorkspace({
     );
   };
 
-  const handleRenameFolder = (folderId: string, newName: string) => {
-    if (folderId === pendingFolderId) {
+  const handleRenameFolder = (folderSlug: string, newName: string) => {
+    if (folderSlug === pendingFolderId) {
       return;
     }
 
     updateFolder(
-      { id: folderId, data: { name: newName } },
+      { slug: folderSlug, data: { name: newName } },
       {
         onSuccess: () => toast.success("Folder renamed successfully"),
         onError: (error) => {
@@ -248,18 +310,18 @@ export function FolderWorkspace({
     );
   };
 
-  const handleRenameComplete = (folderId: string, finalName: string) => {
-    if (folderId === pendingFolderId) {
+  const handleRenameComplete = (folderSlug: string, finalName: string) => {
+    if (pendingFolderId) {
       handleCreateFolder(finalName);
     }
   };
 
-  const handleDeleteFolder = (folderId: string) => {
-    deleteFolder(folderId, {
+  const handleDeleteFolder = (folderSlug: string) => {
+    deleteFolder(folderSlug, {
       onSuccess: () => {
         toast.success("Folder deleted successfully");
-        if (currentFolderId === folderId) {
-          setCurrentFolderId(null);
+        if (currentFolderSlug === folderSlug) {
+          updateFolderSlug(null);
         }
       },
       onError: (error) => {
@@ -353,8 +415,8 @@ export function FolderWorkspace({
       ...document,
       folder:
         document.folder ||
-        (currentFolderId
-          ? { id: currentFolderId, name: currentFolderName }
+        (currentFolderDbId
+          ? { id: currentFolderDbId, name: currentFolderName }
           : undefined),
     };
 
@@ -394,61 +456,58 @@ export function FolderWorkspace({
   }`;
 
   const tableGridColumns = showDepartmentColumn
-    ? "grid-cols-[minmax(320px,1.8fr)_160px_160px_180px_minmax(140px,1fr)_132px]"
-    : "grid-cols-[minmax(320px,1.8fr)_160px_160px_minmax(140px,1fr)_132px]";
+    ? "grid-cols-[minmax(280px,2fr)_140px_140px_160px_minmax(120px,1fr)_120px]"
+    : "grid-cols-[minmax(280px,2fr)_140px_140px_minmax(120px,1fr)_120px]";
 
   return (
-    <div className="space-y-5">
-      <header className="space-y-1">
-        <h1 className="text-3xl font-semibold text-foreground">{title}</h1>
-        <p className="max-w-3xl text-sm text-secondary">{description}</p>
-      </header>
-
-      <section className="border border-default bg-surface">
-        <div className=" bg-[linear-gradient(180deg,rgba(248,250,252,0.98)_0%,rgba(255,255,255,0.98)_100%)] px-5 py-2">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-
-            {showActions ? (
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => handleUploadDocument()}
-                  className="inline-flex items-center justify-center gap-2 rounded border border-default bg-surface px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
-                >
-                  <UploadIcon className="h-4 w-4" />
-                  Upload file
-                </button>
-                <button
-                  type="button"
-                  onClick={handleStartNewFolder}
-                  className="inline-flex items-center rounded justify-center gap-2 bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:bg-primary-hover"
-                >
-                  <Plus className="h-4 w-4" />
-                  New folder
-                </button>
-              </div>
-            ) : null}
+    <div className="space-y-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <p className="max-w-2xl text-sm leading-relaxed text-secondary">
+          {description}
+        </p>
+        {readOnly ? (
+          <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-default bg-surface px-3 py-1.5 text-xs font-medium text-secondary">
+            <Lock className="h-3.5 w-3.5" />
+            View only
+          </span>
+        ) : null}
+        {canManage ? (
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => handleUploadDocument()}
+              className="inline-flex items-center justify-center gap-2 rounded border border-default bg-surface px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+            >
+              <UploadIcon className="h-4 w-4" />
+              Upload file
+            </button>
+            <button
+              type="button"
+              onClick={handleStartNewFolder}
+              className="inline-flex items-center justify-center gap-2 rounded  bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
+            >
+              <Plus className="h-4 w-4" />
+              New folder
+            </button>
           </div>
-        </div>
+        ) : null}
+      </div>
 
-        <div className="border-b border-default bg-[var(--color-bg-secondary)] px-5 py-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0 overflow-hidden border border-default bg-surface px-3 py-2">
-              <Breadcrumb
-                path={breadcrumbPath}
-                onNavigate={handleNavigateToFolder}
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-secondary">
-              <span className="border border-default bg-surface px-3 py-1.5">
-                {itemCountLabel}
-              </span>
-              <span className="border border-default bg-surface px-3 py-1.5">
-                {isInFolder
-                  ? "Destination ready for uploads"
-                  : "Top-level workspace"}
-              </span>
-            </div>
+      <section className="overflow-hidden rounded-2xl border border-default bg-surface shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-default bg-[var(--color-bg-secondary)]/60 px-4 py-3 sm:px-5 sm:py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0 rounded-xl border border-default/80 bg-surface px-3 py-2.5">
+            <Breadcrumb
+              path={breadcrumbPath}
+              onNavigate={handleNavigateToFolder}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-default bg-surface px-3 py-1 text-xs font-medium text-secondary">
+              {itemCountLabel}
+            </span>
+            <span className="rounded-full border border-default bg-surface px-3 py-1 text-xs font-medium text-secondary">
+              {isInFolder ? currentFolderName : "Root"}
+            </span>
           </div>
         </div>
 
@@ -467,22 +526,34 @@ export function FolderWorkspace({
               onAction={() => window.location.reload()}
             />
           </div>
-        ) : hasContent ? (
-          <div className="overflow-x-auto overflow-y-visible">
-            <div className="min-w-[1080px]">
-              <div className="px-4 py-4">
+        ) : hasContent || showRootFolderScope ? (
+          <div className="overflow-x-auto">
+            <div className="min-w-[960px]">
+              {showRootFolderScope ? (
+                <div className="border-b border-default px-4 py-4 sm:px-5">
+                  <FolderScopeFields
+                    branchId={folderBranchId}
+                    departmentId={folderDepartmentId}
+                    onBranchChange={setFolderBranchId}
+                    onDepartmentChange={setFolderDepartmentId}
+                  />
+                </div>
+              ) : null}
+              <div className="border-b border-default px-4 py-3 sm:px-5">
                 <SortBar sortBy={sortBy} onChange={setSortBy} />
               </div>
 
               <div
-                className={`grid ${tableGridColumns} gap-4 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-secondary`}
+                className={`grid ${tableGridColumns} gap-3 border-b border-default bg-[var(--color-bg-secondary)]/40 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-secondary sm:px-5`}
               >
                 <span>Name</span>
-                <span>Date modified</span>
+                <span>Modified</span>
                 <span>Type</span>
                 {showDepartmentColumn ? <span>Department</span> : null}
                 <span>Details</span>
-                <span className="text-right">Actions</span>
+                <span className="text-right">
+                  {readOnly ? "Open" : "Actions"}
+                </span>
               </div>
 
               {sortedFolders.map((folder) => (
@@ -490,12 +561,13 @@ export function FolderWorkspace({
                   key={folder.id}
                   folder={folder}
                   onOpen={handleOpenFolder}
-                  onRename={handleRenameFolder}
-                  onRenameComplete={handleRenameComplete}
-                  onDelete={handleDeleteFolder}
-                  onUpload={showActions ? handleUploadDocument : undefined}
-                  isOwner={isAdmin || folder.createdBy?.id === currentUser.id}
-                  startInRenameMode={folder.id === pendingFolderId}
+                  onRename={canManage ? handleRenameFolder : undefined}
+                  onRenameComplete={canManage ? handleRenameComplete : undefined}
+                  onDelete={canManage ? handleDeleteFolder : undefined}
+                  onUpload={canManage ? handleUploadDocument : undefined}
+                  isOwner={canManage}
+                  readOnly={readOnly}
+                  startInRenameMode={canManage && folder.id === pendingFolderId}
                   showDepartmentColumn={showDepartmentColumn}
                 />
               ))}
@@ -510,20 +582,21 @@ export function FolderWorkspace({
                         ? document.category
                         : document.category?.name,
                   }}
-                  onDelete={handleDeleteDocument}
+                  onDelete={canManage ? handleDeleteDocument : undefined}
                   onView={handleViewDocument}
                   onDetails={handleOpenDocumentDetails}
                   onDownload={handleDownloadDocument}
-                  onRename={handleRenameDocument}
-                  isOwner={isAdmin || document.uploadedBy === currentUser.name}
+                  onRename={canManage ? handleRenameDocument : undefined}
+                  isOwner={canManage}
+                  readOnly={readOnly}
                   showDepartmentColumn={showDepartmentColumn}
                 />
               ))}
             </div>
           </div>
         ) : (
-          <div className="p-6">
-            {showActions ? (
+          <div className="p-8 sm:p-10">
+            {canManage ? (
               <EmptyState
                 title={
                   isInFolder ? "This folder is empty" : "No folders or files yet"
@@ -531,18 +604,33 @@ export function FolderWorkspace({
                 description={
                   isInFolder
                     ? "Create a subfolder or upload documents directly here."
-                    : "Start with a folder, then users can drop files into the right place."
+                    : "Start with a folder, then add files as you go."
                 }
-                actionLabel={isInFolder ? "Upload Files" : "Create Folder"}
+                actionLabel={isInFolder ? "Upload file" : "Create folder"}
                 actionIcon={isInFolder ? UploadIcon : FolderPlus}
                 onAction={
                   isInFolder ? () => handleUploadDocument() : handleStartNewFolder
                 }
               />
             ) : (
-              <div className="rounded-2xl border border-dashed border-default bg-[var(--color-bg-secondary)] p-12 text-center text-sm text-secondary">
-                <h2 className="text-lg font-semibold text-foreground">No folders or files</h2>
-                <p className="mt-2">There are no folders or files to display.</p>
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-default bg-[var(--color-bg-secondary)]/50 px-6 py-14 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-subtle">
+                  <FolderOpen className="h-8 w-8 text-primary" />
+                </div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  {isInFolder ? "This folder is empty" : "No folders or files yet"}
+                </h2>
+                <p className="mt-2 max-w-sm text-sm text-secondary">
+                  {readOnly
+                    ? "Nothing has been added here yet. Check back later or browse another folder."
+                    : "There is no content to display."}
+                </p>
+                {readOnly ? (
+                  <p className="mt-4 inline-flex items-center gap-2 text-xs font-medium text-secondary">
+                    <Eye className="h-3.5 w-3.5" />
+                    View and download only on this page
+                  </p>
+                ) : null}
               </div>
             )}
           </div>
@@ -556,6 +644,7 @@ export function FolderWorkspace({
         onClose={handleCloseDocumentDetails}
         onOpen={handleOpenSelectedDocument}
         onDownload={handleDownloadSelectedDocument}
+        readOnly={readOnly}
       />
 
       <DocumentPreview

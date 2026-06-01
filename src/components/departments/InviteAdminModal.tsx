@@ -24,8 +24,7 @@ export function InviteAdminModal({
   };
 
   const handleConfirm = async () => {
-    const trimmedEmail = email.trim();
-    await onConfirm({ email: trimmedEmail });
+    await onConfirm({ email: email.trim() });
     handleClose();
   };
 
@@ -33,7 +32,7 @@ export function InviteAdminModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Invite Department Admin"
+      title="Invite Department Manager"
     >
       <div className="space-y-4">
         <div>
@@ -45,7 +44,7 @@ export function InviteAdminModal({
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             className="mt-2 w-full rounded-2xl border border-default bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
-            placeholder="admin@example.com"
+            placeholder="manager@example.com"
           />
         </div>
 
@@ -54,7 +53,7 @@ export function InviteAdminModal({
             type="button"
             onClick={handleClose}
             disabled={isSubmitting}
-            className="rounded-2xl border border-default bg-background px-4 py-3 text-sm font-semibold text-secondary transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded border border-default bg-background px-4 py-3 text-sm font-semibold text-secondary transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel
           </button>
@@ -62,9 +61,9 @@ export function InviteAdminModal({
             type="button"
             onClick={() => void handleConfirm()}
             disabled={!email.trim() || isSubmitting}
-            className="rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSubmitting ? "Inviting..." : "Send Invite"}
+            {isSubmitting ? "Sending..." : "Send Invite"}
           </button>
         </div>
       </div>

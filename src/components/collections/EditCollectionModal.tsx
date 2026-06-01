@@ -46,7 +46,7 @@ export function EditCollectionModal({
     try {
       await updateCollection.mutate(
         {
-          id: collection.id,
+          slug: collection.slug,
           data: {
             name: trimmedName,
             description: description.trim() || undefined,

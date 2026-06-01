@@ -3,9 +3,11 @@ import type { ApiSuccessEnvelope } from "@/types/http";
 import type {
   AddDocumentInput,
   Collection,
+  CollectionsListResult,
   CreateCollectionInput,
   UpdateCollectionInput,
 } from "@/types/collection";
+import type { SharedLevel } from "@/types/shared-space";
 import type { Document } from "@/types/document";
 
 type CreatedByApiRecord = {
@@ -58,8 +60,11 @@ type CollectionDocumentApiRecord = {
 
 type CollectionApiRecord = {
   id: string;
+  slug: string;
   name: string;
   description?: string | null;
+  isShared?: boolean;
+  level?: SharedLevel | null;
   organizationId: string;
   createdAt: string;
   updatedAt: string;
@@ -70,6 +75,11 @@ type CollectionApiRecord = {
   _count?: {
     documents: number;
   };
+};
+
+type CollectionsListApiResponse = {
+  private: CollectionApiRecord[];
+  shared: CollectionApiRecord[];
 };
 
 function normalizeCollection(collection: CollectionApiRecord): Collection {
@@ -118,8 +128,11 @@ function normalizeCollection(collection: CollectionApiRecord): Collection {
 
   return {
     id: collection.id,
+    slug: collection.slug,
     name: collection.name,
     description: collection.description ?? null,
+    isShared: collection.isShared ?? false,
+    level: collection.level ?? null,
     organizationId: collection.organizationId,
     documentCount,
     createdBy,
@@ -139,48 +152,51 @@ export const collectionApi = {
     return normalizeCollection(response.data);
   },
 
-  async getCollections(): Promise<Collection[]> {
-    const response = await apiClient.get<ApiSuccessEnvelope<CollectionApiRecord[]>>(
-      "/collections",
-    );
+  async getCollections(): Promise<CollectionsListResult> {
+    const response = await apiClient.get<
+      ApiSuccessEnvelope<CollectionsListApiResponse>
+    >("/collections");
 
-    return response.data.map(normalizeCollection);
+    return {
+      private: response.data.private.map(normalizeCollection),
+      shared: response.data.shared.map(normalizeCollection),
+    };
   },
 
-  async getCollectionById(id: string): Promise<Collection> {
+  async getCollectionBySlug(slug: string): Promise<Collection> {
     const response = await apiClient.get<ApiSuccessEnvelope<CollectionApiRecord>>(
-      `/collections/${id}`,
+      `/collections/${encodeURIComponent(slug)}`,
     );
 
     return normalizeCollection(response.data);
   },
 
   async updateCollection(
-    id: string,
+    slug: string,
     data: UpdateCollectionInput,
   ): Promise<Collection> {
     const response = await apiClient.patch<ApiSuccessEnvelope<CollectionApiRecord>>(
-      `/collections/${id}`,
+      `/collections/${encodeURIComponent(slug)}`,
       data,
     );
 
     return normalizeCollection(response.data);
   },
 
-  async deleteCollection(id: string): Promise<Collection> {
+  async deleteCollection(slug: string): Promise<Collection> {
     const response = await apiClient.delete<ApiSuccessEnvelope<CollectionApiRecord>>(
-      `/collections/${id}`,
+      `/collections/${encodeURIComponent(slug)}`,
     );
 
     return normalizeCollection(response.data);
   },
 
   async addDocument(
-    collectionId: string,
+    collectionSlug: string,
     documentId: string,
   ): Promise<Collection> {
     const response = await apiClient.post<ApiSuccessEnvelope<CollectionApiRecord>>(
-      `/collections/${collectionId}/documents`,
+      `/collections/${encodeURIComponent(collectionSlug)}/documents`,
       { documentId },
     );
 
@@ -188,11 +204,11 @@ export const collectionApi = {
   },
 
   async removeDocument(
-    collectionId: string,
+    collectionSlug: string,
     documentId: string,
   ): Promise<Collection> {
     const response = await apiClient.delete<ApiSuccessEnvelope<CollectionApiRecord>>(
-      `/collections/${collectionId}/documents/${documentId}`,
+      `/collections/${encodeURIComponent(collectionSlug)}/documents/${documentId}`,
     );
 
     return normalizeCollection(response.data);

@@ -15,17 +15,18 @@ export function useGetCollections() {
   });
 
   return {
-    collections: query.data ?? [],
+    collections: query.data?.private ?? [],
+    sharedCollections: query.data?.shared ?? [],
     isLoading: query.isLoading,
     isError: query.isError,
   };
 }
 
-export function useGetCollectionById(id: string) {
+export function useGetCollectionBySlug(slug: string) {
   const query = useQuery({
-    queryKey: ["collections", id],
-    queryFn: () => collectionApi.getCollectionById(id),
-    enabled: Boolean(id),
+    queryKey: ["collections", slug],
+    queryFn: () => collectionApi.getCollectionBySlug(slug),
+    enabled: Boolean(slug),
   });
 
   return {
@@ -55,8 +56,8 @@ export function useCreateCollection() {
 export function useUpdateCollection() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateCollectionInput }) =>
-      collectionApi.updateCollection(id, data),
+    mutationFn: ({ slug, data }: { slug: string; data: UpdateCollectionInput }) =>
+      collectionApi.updateCollection(slug, data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["collections"] });
     },
@@ -72,7 +73,7 @@ export function useUpdateCollection() {
 export function useDeleteCollection() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (id: string) => collectionApi.deleteCollection(id),
+    mutationFn: (slug: string) => collectionApi.deleteCollection(slug),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["collections"] });
     },
@@ -89,12 +90,12 @@ export function useAddDocument() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: ({
-      collectionId,
+      collectionSlug,
       documentId,
     }: {
-      collectionId: string;
+      collectionSlug: string;
       documentId: string;
-    }) => collectionApi.addDocument(collectionId, documentId),
+    }) => collectionApi.addDocument(collectionSlug, documentId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["collections"] });
     },
@@ -111,12 +112,12 @@ export function useRemoveDocument() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: ({
-      collectionId,
+      collectionSlug,
       documentId,
     }: {
-      collectionId: string;
+      collectionSlug: string;
       documentId: string;
-    }) => collectionApi.removeDocument(collectionId, documentId),
+    }) => collectionApi.removeDocument(collectionSlug, documentId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["collections"] });
     },

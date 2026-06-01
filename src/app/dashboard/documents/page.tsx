@@ -8,6 +8,7 @@ import { DashboardDocumentRow } from "@/components/documents/DashboardDocumentRo
 import { DocumentDetails } from "@/components/documents/DocumentDetails";
 import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import { SortBar } from "@/components/ui/SortBar";
+import { AppSelect } from "@/components/ui/AppSelect";
 import type { Document, DocumentFilters, SortOption } from "@/types/document";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
@@ -159,33 +160,34 @@ export default function DashboardDocumentsPage() {
 
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-secondary" />
-            <select
+            <AppSelect
+              className="flex-1"
               value={filters.categoryId ?? ""}
-              onChange={(event) => handleCategoryFilter(event.target.value || undefined)}
-              className="flex-1 rounded border border-default bg-[var(--color-bg-secondary)] px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
-            >
-              <option value="">All Categories</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+              onValueChange={(value) => handleCategoryFilter(value || undefined)}
+              placeholder="All Categories"
+              triggerClassName="rounded-xl"
+              options={[
+                { value: "", label: "All Categories" },
+                ...categories.map((category) => ({
+                  value: category.id,
+                  label: category.name,
+                })),
+              ]}
+            />
           </div>
 
           <div className="flex flex-col gap-2 text-sm text-secondary sm:flex-row sm:items-center sm:justify-end">
             <span>Page size</span>
-            <select
-              value={filters.limit}
-              onChange={(event) => handlePageSizeChange(Number(event.target.value))}
-              className="rounded-2xl border border-default bg-[var(--color-bg-secondary)] px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
-            >
-              {PAGE_SIZE_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+            <AppSelect
+              value={String(filters.limit)}
+              onValueChange={(value) => handlePageSizeChange(Number(value))}
+              placeholder="Page size"
+              triggerClassName="rounded-2xl min-w-[5rem]"
+              options={PAGE_SIZE_OPTIONS.map((option) => ({
+                value: String(option),
+                label: String(option),
+              }))}
+            />
           </div>
         </div>
 

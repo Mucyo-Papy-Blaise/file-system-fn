@@ -12,6 +12,7 @@ type InvitationApiRecord = {
   email: string;
   role: Invitation["role"];
   status: InvitationStatus;
+  branchId?: string | null;
   departmentId?: string | null;
   createdAt: string;
   invitedBy: {
@@ -26,6 +27,7 @@ function normalizeInvitation(invitation: InvitationApiRecord): Invitation {
     email: invitation.email,
     role: invitation.role,
     status: invitation.status,
+    branchId: invitation.branchId ?? undefined,
     departmentId: invitation.departmentId ?? undefined,
     createdAt: invitation.createdAt,
     invitedBy: invitation.invitedBy,

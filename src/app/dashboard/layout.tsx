@@ -19,6 +19,9 @@ const pageTitles: Record<string, string> = {
   "/dashboard/documents": "My Documents",
   "/dashboard/categories": "Categories",
   "/dashboard/collections": "Collections",
+  "/dashboard/shared": "Shared Spaces",
+  "/dashboard/branches": "Branches",
+  "/dashboard/departments": "Departments",
   "/dashboard/members": "Members",
   "/dashboard/company": "Company Settings",
   "/dashboard/staff": "Staff",
@@ -38,7 +41,7 @@ export default function DashboardRouteLayout({
   const showSetupModal =
     !isAuthLoading &&
     !isOrganizationSetupLoading &&
-    user?.role === Role.ADMIN &&
+    user?.role === Role.BRANCH_MANAGER &&
     !isSetupComplete &&
     !isModalCompleted;
 

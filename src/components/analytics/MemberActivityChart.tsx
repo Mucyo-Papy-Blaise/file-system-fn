@@ -1,37 +1,67 @@
 "use client";
 
-import React from "react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
 import { useGetMemberActivity } from "@/lib/hooks/useAnalytics";
+import { DashboardCard } from "@/components/dashboard/DashboardCard";
+import { DashboardChartFrame } from "@/components/dashboard/DashboardChartFrame";
+import {
+  CHART_PRIMARY,
+  CHART_AXIS_TICK,
+  CHART_GRID_STROKE,
+} from "@/components/dashboard/chart-theme";
 
 export function MemberActivityChart() {
   const { data, isLoading, isError } = useGetMemberActivity();
-
-  if (isLoading) {
-    return <div className="h-48 flex items-center justify-center">Loading...</div>;
-  }
-
-  if (isError || !data) {
-    return <div className="h-48 flex items-center justify-center text-sm text-red-600">Failed to load chart.</div>;
-  }
-
-  // Map to simple series by name
-  const chartData = data.map((d) => ({ name: d.name, count: d.count }));
+  const chartData = (data ?? []).map((item) => ({
+    name: item.name,
+    count: item.count,
+  }));
+  const isEmpty = !isLoading && !isError && chartData.length === 0;
 
   return (
-    <div className="p-4 bg-card border rounded-md">
-      <h3 className="text-sm text-secondary mb-2">Member Activity</h3>
-      <div style={{ width: "100%", height: 200 }}>
-        <ResponsiveContainer>
-          <LineChart data={chartData}>
-            <XAxis dataKey="name" />
-            <YAxis />
-            <CartesianGrid strokeDasharray="3 3" />
-            <Tooltip />
-            <Line type="monotone" dataKey="count" stroke="#4F46E5" />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
+    <DashboardCard
+      title="Member activity"
+      description="Documents uploaded per member"
+    >
+      <DashboardChartFrame
+        isLoading={isLoading}
+        isError={isError}
+        isEmpty={isEmpty}
+        height={220}
+      >
+        <div className="h-[220px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} layout="vertical" margin={{ left: 8 }}>
+              <CartesianGrid stroke={CHART_GRID_STROKE} strokeDasharray="3 3" />
+              <XAxis type="number" tick={{ fill: CHART_AXIS_TICK, fontSize: 12 }} />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={88}
+                tick={{ fill: CHART_AXIS_TICK, fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: "12px",
+                  border: "1px solid var(--color-border)",
+                  background: "var(--color-surface)",
+                }}
+              />
+              <Bar dataKey="count" fill={CHART_PRIMARY} radius={[0, 6, 6, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </DashboardChartFrame>
+    </DashboardCard>
   );
 }

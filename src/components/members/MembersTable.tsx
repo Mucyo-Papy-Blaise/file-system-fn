@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { UserX } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/Badge";
+import { RoleBadge } from "@/components/ui/Badge";
 import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { useCancelInvitation } from "@/lib/hooks/useInvitations";
+import { useAuth } from "@/lib/auth-context";
 import type { Invitation } from "@/types/invitation";
 import type { Member } from "@/types/member";
 import { Role } from "@/types/enum";
@@ -30,6 +31,14 @@ function getInitials(name: string) {
     .join("");
 }
 
+function canManageMembers(role: Role) {
+  return (
+    role === Role.OWNER ||
+    role === Role.BRANCH_MANAGER ||
+    role === Role.DEPT_MANAGER
+  );
+}
+
 export function MembersTable({
   members,
   invitations,
@@ -39,12 +48,32 @@ export function MembersTable({
   onChangeRole,
   onRemove,
 }: MembersTableProps) {
+  const { isOwner, user } = useAuth();
   const cancelInvitation = useCancelInvitation();
-  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; memberId: string; memberName: string }>({
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    memberId: string;
+    memberName: string;
+  }>({
     isOpen: false,
     memberId: "",
     memberName: "",
   });
+
+  const filteredMembers = useMemo(() => {
+    if (isOwner) {
+      return members;
+    }
+    if (currentUserRole === Role.BRANCH_MANAGER && user?.branchId) {
+      return members.filter((member) => member.branch?.id === user.branchId);
+    }
+    if (currentUserRole === Role.DEPT_MANAGER && user?.departmentId) {
+      return members.filter((member) => member.department?.id === user.departmentId);
+    }
+    return members;
+  }, [currentUserRole, isOwner, members, user?.branchId, user?.departmentId]);
+
+  const showBranchColumn = isOwner;
 
   const handleDeleteClick = (memberId: string, memberName: string) => {
     setDeleteConfirm({ isOpen: true, memberId, memberName });
@@ -82,6 +111,8 @@ export function MembersTable({
     );
   }
 
+  const colSpan = showBranchColumn ? 8 : 7;
+
   return (
     <>
       <div className="overflow-hidden rounded-3xl border border-default bg-surface shadow-sm">
@@ -91,6 +122,9 @@ export function MembersTable({
               <th className="px-5 py-4 font-medium">Avatar</th>
               <th className="px-5 py-4 font-medium">Name</th>
               <th className="px-5 py-4 font-medium">Email</th>
+              {showBranchColumn ? (
+                <th className="px-5 py-4 font-medium">Branch</th>
+              ) : null}
               <th className="px-5 py-4 font-medium">Department</th>
               <th className="px-5 py-4 font-medium">Role</th>
               <th className="px-5 py-4 font-medium">Date Joined</th>
@@ -98,14 +132,14 @@ export function MembersTable({
             </tr>
           </thead>
           <tbody>
-            {members.length === 0 ? (
+            {filteredMembers.length === 0 ? (
               <tr className="border-t border-default">
-                <td colSpan={7} className="px-5 py-8 text-center text-sm text-secondary">
+                <td colSpan={colSpan} className="px-5 py-8 text-center text-sm text-secondary">
                   No members have accepted an invitation yet.
                 </td>
               </tr>
             ) : (
-              members.map((member) => (
+              filteredMembers.map((member) => (
                 <tr key={member.id} className="border-t border-default">
                   <td className="px-5 py-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-subtle text-sm font-semibold text-primary">
@@ -114,21 +148,21 @@ export function MembersTable({
                   </td>
                   <td className="px-5 py-4 text-foreground">{member.name}</td>
                   <td className="px-5 py-4 text-secondary">{member.email}</td>
-                  <td className="px-5 py-4 text-secondary">{member.department?.name ?? '—'}</td>
+                  {showBranchColumn ? (
+                    <td className="px-5 py-4 text-secondary">
+                      {member.branch?.name ?? "—"}
+                    </td>
+                  ) : null}
+                  <td className="px-5 py-4 text-secondary">
+                    {member.department?.name ?? "—"}
+                  </td>
                   <td className="px-5 py-4">
-                    <Badge label={member.role} variant={member.role === Role.ADMIN ? "admin" : "member"} />
+                    <RoleBadge role={member.role} />
                   </td>
                   <td className="px-5 py-4 text-secondary">{member.createdAt}</td>
                   <td className="px-5 py-4 text-right">
                     <div className="flex flex-wrap justify-end gap-2">
-                      {/* <button
-                        type="button"
-                        onClick={() => onChangeRole(member.id)}
-                        className="rounded-2xl bg-[var(--color-bg-secondary)] px-3 py-2 text-xs font-semibold text-secondary transition hover:bg-[var(--color-bg-tertiary)]"
-                      >
-                        Change Role
-                      </button> */}
-                      {currentUserRole === Role.ADMIN || currentUserRole === Role.SUPER_ADMIN && (
+                      {canManageMembers(currentUserRole) ? (
                         <button
                           type="button"
                           onClick={() => handleDeleteClick(member.id, member.name)}
@@ -137,7 +171,7 @@ export function MembersTable({
                           <UserX className="h-4 w-4" />
                           Remove
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -150,13 +184,18 @@ export function MembersTable({
       <div className="overflow-hidden rounded-3xl border border-default bg-surface shadow-sm">
         <div className="border-b border-default px-5 py-4">
           <h2 className="text-base font-semibold text-foreground">Pending Invitations</h2>
-          <p className="mt-1 text-sm text-secondary">Track invitations that are waiting for acceptance.</p>
+          <p className="mt-1 text-sm text-secondary">
+            Track invitations that are waiting for acceptance.
+          </p>
         </div>
 
         {isInvitationsLoading ? (
           <div className="space-y-3 p-5">
             {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="grid gap-4 rounded-2xl border border-default p-4 sm:grid-cols-[1.5fr_120px_140px_120px]">
+              <div
+                key={index}
+                className="grid gap-4 rounded-2xl border border-default p-4 sm:grid-cols-[1.5fr_120px_140px_120px]"
+              >
                 <LoadingSkeleton height={20} width="100%" rounded="1rem" />
                 <LoadingSkeleton height={20} width={100} rounded="1rem" />
                 <LoadingSkeleton height={20} width={110} rounded="1rem" />
@@ -179,10 +218,7 @@ export function MembersTable({
                 <tr key={invitation.id} className="border-t border-default">
                   <td className="px-5 py-4 text-foreground">{invitation.email}</td>
                   <td className="px-5 py-4">
-                    <Badge
-                      label={invitation.role}
-                      variant={invitation.role === Role.ADMIN ? "admin" : "member"}
-                    />
+                    <RoleBadge role={invitation.role} />
                   </td>
                   <td className="px-5 py-4 text-secondary">
                     {new Date(invitation.createdAt).toLocaleDateString()}

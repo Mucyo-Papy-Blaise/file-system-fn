@@ -5,10 +5,14 @@ import { apiClient } from "@/api/api-client";
 import { categoryApi } from "@/api/category.api";
 import type { CategoryFilters, CreateCategoryInput, UpdateCategoryInput } from "@/types/category";
 
-export function useGetCategories(filters?: CategoryFilters) {
+export function useGetCategories(
+  filters?: CategoryFilters,
+  options?: { enabled?: boolean },
+) {
   const query = useQuery({
     queryKey: ["categories", filters],
     queryFn: () => categoryApi.getCategories(filters),
+    enabled: options?.enabled ?? true,
   });
 
   return {

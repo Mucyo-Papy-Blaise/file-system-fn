@@ -40,6 +40,7 @@ interface DocumentCardProps {
   onDownload?: (documentId: string) => void;
   onRename?: (documentId: string, newName: string) => void;
   isOwner?: boolean;
+  readOnly?: boolean;
   showDepartmentColumn?: boolean;
 }
 
@@ -92,6 +93,7 @@ export function DocumentCard({
   onDownload,
   onRename,
   isOwner = false,
+  readOnly = false,
   showDepartmentColumn = false,
 }: DocumentCardProps) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -125,16 +127,16 @@ export function DocumentCard({
   };
 
   const documentGridColumns = showDepartmentColumn
-    ? "grid-cols-[minmax(320px,1.8fr)_160px_160px_180px_minmax(140px,1fr)_132px]"
-    : "grid-cols-[minmax(320px,1.8fr)_160px_160px_minmax(140px,1fr)_132px]";
+    ? "grid-cols-[minmax(280px,2fr)_140px_140px_160px_minmax(120px,1fr)_120px]"
+    : "grid-cols-[minmax(280px,2fr)_140px_140px_minmax(120px,1fr)_120px]";
 
   return (
     <>
       <div
-        className={`grid ${documentGridColumns} items-center gap-4 border-t border-default px-4 py-3 text-sm transition-colors hover:bg-[var(--color-bg-secondary)]`}
+        className={`grid ${documentGridColumns} items-center gap-4 border-t border-default px-4 py-3.5 text-sm transition-colors hover:bg-[var(--color-bg-secondary)]/80`}
       >
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-[var(--color-bg-secondary)]">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-bg-secondary)]">
             {fileMeta.icon}
           </div>
 
@@ -201,6 +203,31 @@ export function DocumentCard({
         </div>
 
         <div className="flex items-center justify-end gap-2">
+          {readOnly ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onDetails) {
+                    onDetails(document.id);
+                  } else {
+                    onView?.(document.id);
+                  }
+                }}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-default px-3 text-xs font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+              >
+                View
+              </button>
+              <button
+                type="button"
+                onClick={() => onDownload?.(document.id)}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-default px-3 text-xs font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+              >
+                <Download className="h-3.5 w-3.5" />
+              </button>
+            </>
+          ) : (
+            <>
           <button
             type="button"
             onClick={() => {
@@ -210,7 +237,7 @@ export function DocumentCard({
                 onView?.(document.id);
               }
             }}
-            className="inline-flex h-9 items-center justify-center border border-default px-3 text-xs font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+            className="inline-flex h-9 items-center justify-center rounded-lg border border-default px-3 text-xs font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
           >
             View
           </button>
@@ -277,6 +304,8 @@ export function DocumentCard({
               ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
+            </>
+          )}
         </div>
       </div>
 

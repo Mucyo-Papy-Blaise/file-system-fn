@@ -10,6 +10,7 @@ import { useOrganizationSetup } from "@/lib/hooks/useOrganizationSetup";
 import { useBulkCreateCategories } from "@/lib/hooks/useCategories";
 import { ApiError } from "@/api/api-client";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
+import { Role } from "@/types/enum";
 
 const SETUP_COOKIE_NAME = "org_setup_complete";
 const PRESET_CATEGORIES = [
@@ -91,7 +92,7 @@ export default function SetupCategoriesPage() {
       return;
     }
 
-    if (user.role !== "ADMIN") {
+    if (user.role !== Role.BRANCH_MANAGER) {
       router.replace("/dashboard");
       return;
     }

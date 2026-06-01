@@ -1,46 +1,65 @@
 "use client";
 
 import { useAuth } from "@/lib/auth-context";
+import { useGetStats } from "@/lib/hooks/useAnalytics";
+import { DashboardHero } from "@/components/dashboard/DashboardHero";
+import { DashboardSection } from "@/components/dashboard/DashboardSection";
 import { StatsGrid } from "@/components/analytics/StatsGrid";
 import { DocumentsOverTimeChart } from "@/components/analytics/DocumentsOverTimeChart";
 import { DocumentsByCategoryChart } from "@/components/analytics/DocumentsByCategoryChart";
-import { DocumentsByDepartmentChart } from "@/components/analytics/DocumentsByDepartmentChart";
+import { DocumentsByBranchChart } from "@/components/analytics/DocumentsByBranchChart";
 import { MemberActivityChart } from "@/components/analytics/MemberActivityChart";
 import { StorageWidget } from "@/components/analytics/StorageWidget";
 import { RecentFoldersGrid } from "@/components/analytics/RecentFoldersGrid";
 import { RecentDocumentsWidget } from "@/components/analytics/RecentDocumentsWidget";
 
 export default function DashboardOverviewPage() {
-  const { user } = useAuth();
+  const { isOwner, isBranchManager, isDeptManager } = useAuth();
+  const { stats } = useGetStats();
+
+  const showMemberActivity = isOwner || isBranchManager || isDeptManager;
+  const showBranchChart = isOwner;
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h2 className="text-2xl font-semibold text-foreground">Welcome back, {user?.name ?? "User"}</h2>
-        <p className="text-sm text-secondary">Here is a quick snapshot of your workspace activity.</p>
-      </header>
+    <div className="mx-auto max-w-[1600px] space-y-8 pb-4">
+      <DashboardHero pendingTray={stats?.pendingInbox ?? 0} />
 
-      <StatsGrid />
+      <DashboardSection
+        title="Key metrics"
+        description="Counts scoped to your role and organization."
+      >
+        <StatsGrid />
+      </DashboardSection>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-4">
-          <DocumentsOverTimeChart />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DocumentsByCategoryChart />
-            <DocumentsByDepartmentChart />
+      <DashboardSection
+        title="Insights"
+        description="Trends and breakdowns across your workspace."
+      >
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+          <div className="space-y-6 xl:col-span-8">
+            <DocumentsOverTimeChart />
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <DocumentsByCategoryChart />
+              {showBranchChart ? <DocumentsByBranchChart /> : null}
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-4">
-          <MemberActivityChart />
-          <StorageWidget />
+          <aside className="space-y-6 xl:col-span-4">
+            <StorageWidget />
+            {showMemberActivity ? <MemberActivityChart /> : null}
+          </aside>
         </div>
-      </div>
+      </DashboardSection>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <RecentDocumentsWidget />
-        <RecentFoldersGrid />
-      </div>
+      <DashboardSection
+        title="Recent activity"
+        description="Latest folders and documents."
+      >
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <RecentDocumentsWidget />
+          <RecentFoldersGrid />
+        </div>
+      </DashboardSection>
     </div>
   );
 }

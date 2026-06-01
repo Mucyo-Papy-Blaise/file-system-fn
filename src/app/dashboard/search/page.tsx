@@ -2,126 +2,103 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Download, Eye, Filter, Search } from "lucide-react";
-import { useGetCategories } from "@/lib/hooks/useCategories";
-import { useGetRootFolders } from "@/lib/hooks/useFolders";
-import { useSearch } from "@/lib/hooks/useSearch";
-import { Badge } from "@/components/ui/Badge";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Eye,
+  FileText,
+  FolderOpen,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
+import { SearchHighlight } from "@/components/search/SearchHighlight";
+import { AppSelect } from "@/components/ui/AppSelect";
+import { DocumentDetails } from "@/components/documents/DocumentDetails";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
-import type { SearchFilters } from "@/types/search";
+import { useGetCategories } from "@/lib/hooks/useCategories";
+import { useGetRootFolders } from "@/lib/hooks/useFolders";
+import { useGetDocumentById } from "@/lib/hooks/useDocuments";
+import { useSearch } from "@/lib/hooks/useSearch";
+import type { SearchDocumentHit, SearchFilters } from "@/types/search";
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
+const MIN_QUERY_LENGTH = 2;
 
 export default function DashboardSearchPage() {
-  const [filters, setFilters] = useState<SearchFilters>({
-    query: "",
-    categoryId: undefined,
-    documentType: undefined,
-    folderId: undefined,
-    dateFrom: undefined,
-    dateTo: undefined,
-    page: 1,
-    limit: 10,
-  });
+  const [query, setQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
+  const [categoryId, setCategoryId] = useState<string | undefined>();
+  const [folderId, setFolderId] = useState<string | undefined>();
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
+    null,
+  );
+
+  const filters: SearchFilters = useMemo(
+    () => ({
+      query,
+      categoryId,
+      folderId,
+      page,
+      limit: 15,
+    }),
+    [query, categoryId, folderId, page],
+  );
 
   const { searchResult, isLoading } = useSearch(filters);
-  const { categories } = useGetCategories();
-  const { folders } = useGetRootFolders();
-
-  const handleQueryChange = (value: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      query: value,
-      page: 1,
-    }));
-  };
-
-  const handleCategoryIdChange = (categoryId: string | undefined) => {
-    setFilters((prev) => ({
-      ...prev,
-      categoryId,
-      page: 1,
-    }));
-  };
-
-  const handleDocumentTypeChange = (documentType: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      documentType: documentType || undefined,
-      page: 1,
-    }));
-  };
-
-  const handleFolderIdChange = (folderId: string | undefined) => {
-    setFilters((prev) => ({
-      ...prev,
-      folderId,
-      page: 1,
-    }));
-  };
-
-  const handleDateFromChange = (dateFrom: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      dateFrom: dateFrom || undefined,
-      page: 1,
-    }));
-  };
-
-  const handleDateToChange = (dateTo: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      dateTo: dateTo || undefined,
-      page: 1,
-    }));
-  };
-
-  const handleClearFilters = () => {
-    setFilters((prev) => ({
-      ...prev,
-      categoryId: undefined,
-      documentType: undefined,
-      folderId: undefined,
-      dateFrom: undefined,
-      dateTo: undefined,
-      page: 1,
-    }));
-  };
-
-  const handlePageChange = (page: number) => {
-    setFilters((prev) => ({
-      ...prev,
-      page,
-    }));
-  };
+  const { categories } = useGetCategories(undefined, { enabled: showFilters });
+  const { folders } = useGetRootFolders({ enabled: showFilters });
+  const { document: selectedDocument, isLoading: isDocumentLoading } =
+    useGetDocumentById(selectedDocumentId ?? "");
 
   const documents = searchResult?.documents.data ?? [];
   const foldersResult = searchResult?.folders.data ?? [];
   const documentTotal = searchResult?.documents.total ?? 0;
   const folderTotal = searchResult?.folders.total ?? 0;
-  const currentPage = filters.page ?? 1;
-  const totalPages = Math.max(1, Math.ceil(documentTotal / (filters.limit ?? 10)));
-  const showSearchResults = filters.query.trim().length >= 2;
+  const totalPages = Math.max(1, Math.ceil(documentTotal / (filters.limit ?? 15)));
+  const canSearch = query.trim().length >= MIN_QUERY_LENGTH;
+  const hasActiveFilters = Boolean(categoryId || folderId);
 
-  const searchTitle = useMemo(() => {
-    if (!showSearchResults) {
-      return "Enter at least 2 characters to search documents and folders.";
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    setPage(1);
+  };
+
+  const handleClearFilters = () => {
+    setCategoryId(undefined);
+    setFolderId(undefined);
+    setPage(1);
+  };
+
+  const statusLine = useMemo(() => {
+    if (!canSearch) {
+      return "Type at least 2 characters to search.";
     }
     if (isLoading) {
-      return "Searching...";
+      return "Searching…";
     }
-    return `Found ${documentTotal} documents and ${folderTotal} folders`;
-  }, [documentTotal, folderTotal, isLoading, showSearchResults]);
+    const parts: string[] = [];
+    if (documentTotal > 0) {
+      parts.push(`${documentTotal} document${documentTotal === 1 ? "" : "s"}`);
+    }
+    if (folderTotal > 0) {
+      parts.push(`${folderTotal} folder${folderTotal === 1 ? "" : "s"}`);
+    }
+    if (parts.length === 0) {
+      return "No matches found.";
+    }
+    return `Found ${parts.join(" and ")}`;
+  }, [canSearch, documentTotal, folderTotal, isLoading]);
 
-  const handleOpenDocument = (doc: { fileUrl: string }) => {
+  const handleOpenDocument = (doc: SearchDocumentHit) => {
     if (!doc.fileUrl) return;
     window.open(doc.fileUrl, "_blank", "noopener,noreferrer");
   };
 
-  const handleDownloadDocument = (doc: { fileUrl: string; fileName: string }) => {
+  const handleDownloadDocument = (doc: SearchDocumentHit) => {
     if (!doc.fileUrl) return;
-
     const link = window.document.createElement("a");
     link.href = doc.fileUrl;
     link.download = doc.fileName;
@@ -131,272 +108,271 @@ export default function DashboardSearchPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
+    <div className="mx-auto max-w-4xl space-y-6 p-6">
+      <div className="text-center">
         <h1 className="text-2xl font-bold text-foreground">Search</h1>
-        <p className="mt-1 text-sm text-secondary">
-          Find documents and folders across your workspace.
+        <p className="mt-2 text-sm text-secondary">
+          Find files by name, details, or words inside the document text.
         </p>
       </div>
 
-      <section className="space-y-4 rounded-3xl border border-default bg-surface p-5 shadow-sm">
+      <section className="rounded-3xl border border-default bg-surface p-5 shadow-sm">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" />
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-secondary" />
           <input
-            type="text"
-            placeholder="Search documents and folders..."
-            value={filters.query}
+            type="search"
+            autoFocus
+            placeholder="Search files, summaries, or text inside documents…"
+            value={query}
             onChange={(event) => handleQueryChange(event.target.value)}
-            className="w-full rounded-3xl border border-default bg-[var(--color-bg-secondary)] py-3 pl-12 pr-4 text-foreground placeholder-secondary focus:border-primary focus:outline-none"
+            className="w-full rounded-3xl border border-default bg-[var(--color-bg-secondary)] py-3.5 pl-12 pr-4 text-base text-foreground placeholder-secondary focus:border-primary focus:outline-none"
           />
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Category</label>
-              <select
-                value={filters.categoryId ?? ""}
-                onChange={(event) => handleCategoryIdChange(event.target.value || undefined)}
-                className="w-full rounded-2xl border border-default bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none"
-              >
-                <option value="">All Categories</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Document Type</label>
-              <input
-                type="text"
-                placeholder="Enter document type"
-                value={filters.documentType ?? ""}
-                onChange={(event) => handleDocumentTypeChange(event.target.value)}
-                className="w-full rounded-2xl border border-default bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-foreground placeholder-secondary focus:border-primary focus:outline-none"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Folder</label>
-              <select
-                value={filters.folderId ?? ""}
-                onChange={(event) => handleFolderIdChange(event.target.value || undefined)}
-                className="w-full rounded-2xl border border-default bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none"
-              >
-                <option value="">All Folders</option>
-                {folders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[1fr_1fr]">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Date From</label>
-              <input
-                type="date"
-                value={filters.dateFrom ?? ""}
-                onChange={(event) => handleDateFromChange(event.target.value)}
-                className="w-full rounded-2xl border border-default bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Date To</label>
-              <input
-                type="date"
-                value={filters.dateTo ?? ""}
-                onChange={(event) => handleDateToChange(event.target.value)}
-                className="w-full rounded-2xl border border-default bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none"
-              />
-            </div>
-
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={handleClearFilters}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-3xl border border-default bg-surface px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)]"
-              >
-                <Filter className="h-4 w-4" />
-                Clear filters
-              </button>
-            </div>
-          </div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-secondary">{statusLine}</p>
+          <button
+            type="button"
+            onClick={() => setShowFilters((open) => !open)}
+            className="inline-flex items-center gap-2 rounded-2xl border border-default px-3 py-2 text-sm font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Filters
+            {hasActiveFilters ? (
+              <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-white">
+                On
+              </span>
+            ) : null}
+            <ChevronDown
+              className={`h-4 w-4 transition ${showFilters ? "rotate-180" : ""}`}
+            />
+          </button>
         </div>
+
+        {showFilters ? (
+          <div className="mt-4 grid gap-3 border-t border-default pt-4 sm:grid-cols-2">
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium text-foreground">Category</span>
+              <AppSelect
+                value={categoryId ?? ""}
+                onValueChange={(value) => {
+                  setCategoryId(value || undefined);
+                  setPage(1);
+                }}
+                placeholder="All categories"
+                options={[
+                  { value: "", label: "All categories" },
+                  ...categories.map((category) => ({
+                    value: category.id,
+                    label: category.name,
+                  })),
+                ]}
+              />
+            </label>
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium text-foreground">Folder</span>
+              <AppSelect
+                value={folderId ?? ""}
+                onValueChange={(value) => {
+                  setFolderId(value || undefined);
+                  setPage(1);
+                }}
+                placeholder="All folders"
+                options={[
+                  { value: "", label: "All folders" },
+                  ...folders.map((folder) => ({
+                    value: folder.id,
+                    label: folder.name,
+                  })),
+                ]}
+              />
+            </label>
+            {hasActiveFilters ? (
+              <div className="sm:col-span-2">
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Clear filters
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
-      {showSearchResults ? (
-        <section className="space-y-6">
-          <div className="rounded-3xl border border-default bg-surface p-5 shadow-sm">
-            <p className="text-sm font-medium text-foreground">{searchTitle}</p>
-          </div>
+      {!canSearch ? (
+        <div className="rounded-3xl border border-dashed border-default bg-surface/60 px-6 py-12 text-center text-sm text-secondary">
+          Start typing to search across document titles, metadata, summaries, and
+          extracted file text.
+        </div>
+      ) : (
+        <div className="space-y-8">
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-secondary">
+              Documents
+            </h2>
 
-          <div className="space-y-6">
-            <div className="rounded-3xl border border-default bg-surface p-5 shadow-sm">
-              <div className="mb-5 flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">Documents</h2>
-                  <p className="text-sm text-secondary">{documentTotal} items found</p>
-                </div>
-                <Badge label={`${documentTotal}`} variant="category" />
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(4)].map((_, index) => (
+                  <LoadingSkeleton key={index} height={88} rounded="1.25rem" />
+                ))}
               </div>
-
-              {isLoading ? (
-                <div className="space-y-4">
-                  {[...Array(5)].map((_, index) => (
-                    <LoadingSkeleton key={index} height={54} rounded="1rem" />
-                  ))}
-                </div>
-              ) : documents.length === 0 ? (
+            ) : documents.length === 0 ? (
+              hasActiveFilters ? (
                 <EmptyState
                   title="No documents found"
-                  description="Adjust your search or filters to see matching documents."
+                  description="Try different keywords or remove filters."
                   actionLabel="Clear filters"
                   onAction={handleClearFilters}
                 />
               ) : (
-                <div className="overflow-x-auto rounded-3xl border border-default bg-surface">
-                  <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
-                    <thead className="bg-[var(--color-bg-secondary)] text-secondary">
-                      <tr>
-                        <th className="px-4 py-3">Title</th>
-                        <th className="px-4 py-3">Type</th>
-                        <th className="px-4 py-3">Concerning</th>
-                        <th className="px-4 py-3">Category</th>
-                        <th className="px-4 py-3">Folder</th>
-                        <th className="px-4 py-3">Uploaded By</th>
-                        <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {documents.map((document) => (
-                        <tr
-                          key={document.id}
-                          className="border-t border-default hover:bg-[var(--color-bg-secondary)]"
+                <div className="rounded-3xl border border-dashed border-default bg-surface px-6 py-12 text-center text-sm text-secondary">
+                  No documents found. Try different keywords.
+                </div>
+              )
+            ) : (
+              <ul className="space-y-3">
+                {documents.map((document) => (
+                  <li
+                    key={document.id}
+                    className="rounded-2xl border border-default bg-surface p-4 shadow-sm transition hover:border-primary/40"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--color-bg-secondary)]">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDocumentId(document.id)}
+                          className="text-left text-base font-semibold text-foreground transition hover:text-primary"
                         >
-                          <td className="px-4 py-4 text-foreground">{document.title ?? document.fileName}</td>
-                          <td className="px-4 py-4 text-secondary">{document.documentType ?? "—"}</td>
-                          <td className="px-4 py-4 text-secondary">{document.concerning ?? "—"}</td>
-                          <td className="px-4 py-4 text-secondary">{document?.category?.name}</td>
-                          <td className="px-4 py-4 text-secondary">{document.folder.name}</td>
-                          <td className="px-4 py-4 text-secondary">{document.uploadedBy.name}</td>
-                          <td className="px-4 py-4 text-secondary">{new Date(document.createdAt).toLocaleDateString()}</td>
-                          <td className="px-4 py-4 text-right">
-                            <div className="inline-flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenDocument(document)}
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-default bg-[var(--color-bg-secondary)] text-secondary transition hover:bg-[var(--color-bg-tertiary)]"
-                                aria-label="Preview document"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDownloadDocument(document)}
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-default bg-[var(--color-bg-secondary)] text-secondary transition hover:bg-[var(--color-bg-tertiary)]"
-                                aria-label="Download document"
-                              >
-                                <Download className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                          {document.title ?? document.fileName}
+                        </button>
+                        <p className="mt-1 text-xs text-secondary">
+                          {[document.category?.name, document.folder?.name]
+                            .filter(Boolean)
+                            .join(" · ") || "Uncategorized"}
+                          {" · "}
+                          {new Date(document.createdAt).toLocaleDateString()}
+                        </p>
+                        {document.textSnippet ? (
+                          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-secondary">
+                            <SearchHighlight
+                              text={document.textSnippet}
+                              query={query}
+                            />
+                          </p>
+                        ) : document.concerning ? (
+                          <p className="mt-2 line-clamp-1 text-sm text-secondary">
+                            {document.concerning}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDocument(document)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-default text-secondary transition hover:bg-[var(--color-bg-secondary)]"
+                          aria-label="Open file"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadDocument(document)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-default text-secondary transition hover:bg-[var(--color-bg-secondary)]"
+                          aria-label="Download file"
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
 
-              {documentTotal > 0 && (
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-secondary">
-                    Page {currentPage} of {totalPages}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={currentPage <= 1 || isLoading}
-                      onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-default bg-surface px-4 py-2 text-sm text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Previous
-                    </button>
-                    <button
-                      type="button"
-                      disabled={currentPage >= totalPages || isLoading}
-                      onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-default bg-surface px-4 py-2 text-sm text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Next
-                    </button>
-                  </div>
+            {documentTotal > (filters.limit ?? 15) && (
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <p className="text-sm text-secondary">
+                  Page {page} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={page <= 1 || isLoading}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="inline-flex items-center gap-1 rounded-2xl border border-default px-3 py-2 text-sm disabled:opacity-50"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    disabled={page >= totalPages || isLoading}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className="inline-flex items-center gap-1 rounded-2xl border border-default px-3 py-2 text-sm disabled:opacity-50"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </div>
-              )}
-            </div>
-
-            <div className="rounded-3xl border border-default bg-surface p-5 shadow-sm">
-              <div className="mb-5 flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">Folders</h2>
-                  <p className="text-sm text-secondary">{folderTotal} items found</p>
-                </div>
-                <Badge label={`${folderTotal}`} variant="category" />
               </div>
+            )}
+          </section>
 
+          {folderTotal > 0 || (isLoading && canSearch) ? (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-secondary">
+                Folders
+              </h2>
               {isLoading ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {[...Array(6)].map((_, index) => (
-                    <LoadingSkeleton key={index} height={120} rounded="1.5rem" />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[...Array(2)].map((_, index) => (
+                    <LoadingSkeleton key={index} height={72} rounded="1.25rem" />
                   ))}
                 </div>
-              ) : foldersResult.length === 0 ? (
-                <EmptyState
-                  title="No folders found"
-                  description="Try changing your search query or filters to locate folders."
-                  actionLabel="Clear filters"
-                  onAction={handleClearFilters}
-                />
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              ) : foldersResult.length === 0 ? null : (
+                <ul className="grid gap-3 sm:grid-cols-2">
                   {foldersResult.map((folder) => (
-                    <Link
-                      key={folder.id}
-                      href={`/dashboard/folders/${folder.id}`}
-                      className="group rounded-3xl border border-default bg-[var(--color-bg-secondary)] p-5 transition hover:border-primary"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-base font-semibold text-foreground">{folder.name}</p>
-                          <p className="mt-2 text-sm text-secondary">
-                            Created by {folder.createdBy.name}
+                    <li key={folder.id}>
+                      <Link
+                        href={`/dashboard/folders?folder=${encodeURIComponent(folder.slug ?? folder.id)}`}
+                        className="flex items-center gap-3 rounded-2xl border border-default bg-surface p-4 transition hover:border-primary/40"
+                      >
+                        <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10">
+                          <FolderOpen className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-foreground">
+                            {folder.name}
+                          </p>
+                          <p className="text-xs text-secondary">
+                            {folder.itemCount} items
                           </p>
                         </div>
-                        <div className="rounded-2xl bg-primary-subtle px-3 py-2 text-sm font-semibold text-primary">
-                          {folder.itemCount} items
-                        </div>
-                      </div>
-                      <p className="mt-4 text-sm text-secondary">Created at {new Date(folder.createdAt).toLocaleDateString()}</p>
-                    </Link>
+                      </Link>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
-            </div>
-          </div>
-        </section>
-      ) : (
-        <div className="rounded-3xl border border-default bg-surface p-10 text-center text-sm text-secondary">
-          Enter at least 2 characters above to search documents and folders.
+            </section>
+          ) : null}
         </div>
       )}
+
+      {selectedDocumentId ? (
+        <DocumentDetails
+          document={selectedDocument ?? null}
+          isOpen
+          isLoading={isDocumentLoading}
+          onClose={() => setSelectedDocumentId(null)}
+        />
+      ) : null}
     </div>
   );
 }

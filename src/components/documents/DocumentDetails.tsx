@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { AppSelect } from "@/components/ui/AppSelect";
 import { useGetCategories } from "@/lib/hooks/useCategories";
 import { useGetRootFolders } from "@/lib/hooks/useFolders";
 import { useUpdateDocument } from "@/lib/hooks/useDocuments";
@@ -43,6 +44,8 @@ interface DocumentDetailsProps {
   onOpen?: () => void;
   onDownload?: () => void;
   isLoading?: boolean;
+  /** View-only: no edit, move folder, or save */
+  readOnly?: boolean;
 }
 
 function getUploaderName(uploadedBy?: string | NullableId | null) {
@@ -50,6 +53,27 @@ function getUploaderName(uploadedBy?: string | NullableId | null) {
   const name =
     typeof uploadedBy === "string" ? uploadedBy : (uploadedBy.name ?? "");
   return name?.trim() || "Unknown";
+}
+
+function getFolderName(folder?: string | NullableId | null) {
+  if (!folder) return "Unassigned";
+  if (typeof folder === "string") return folder;
+  return folder.name?.trim() || "Unassigned";
+}
+
+function getCategoryName(category?: string | NullableId | null) {
+  if (!category) return "Uncategorized";
+  if (typeof category === "string") return category;
+  return category.name?.trim() || "Uncategorized";
+}
+
+function formatDisplayDate(value?: string | null) {
+  if (!value) return "Unknown";
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function getFileMeta(fileName: string | undefined) {
@@ -92,16 +116,18 @@ export function DocumentDetails({
   onOpen,
   onDownload,
   isLoading = false,
+  readOnly = false,
 }: DocumentDetailsProps) {
   const portalTarget =
     typeof window !== "undefined" ? window.document.body : null;
   const updateDocument = useUpdateDocument();
-  const { categories, isLoading: isCategoriesLoading } = useGetCategories({
-    page: 1,
-    limit: 100,
-  });
+  const { categories, isLoading: isCategoriesLoading } = useGetCategories(
+    { page: 1, limit: 100 },
+    { enabled: !readOnly },
+  );
   const { folders, isLoading: isFoldersLoading } = useGetRootFolders({
     mine: true,
+    enabled: !readOnly,
   });
 
   const [formState, setFormState] = useState<UpdateDocumentInput>(() => ({
@@ -132,6 +158,7 @@ export function DocumentDetails({
     field: K,
     value: UpdateDocumentInput[K],
   ) => {
+    if (readOnly) return;
     setFormState((current) => ({
       ...current,
       [field]: value,
@@ -140,6 +167,7 @@ export function DocumentDetails({
   };
 
   const handleSave = async () => {
+    if (readOnly) return;
     if (!document) return;
 
     const updatePayload: UpdateDocumentInput = {};
@@ -243,6 +271,12 @@ export function DocumentDetails({
             </div>
           ) : (
             <div className="space-y-6">
+              {readOnly ? (
+                <p className="rounded-lg border border-default bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-secondary">
+                  View only on this page. To edit or move this file, use My Folders.
+                </p>
+              ) : null}
+
               <div className="rounded border border-default bg-surface p-5 shadow-sm">
                 <div className="flex items-center gap-4">
                   <div className="grid h-14 w-14 place-items-center rounded bg-[var(--color-bg-secondary)]">
@@ -252,14 +286,20 @@ export function DocumentDetails({
                     <p className="text-xs uppercase tracking-[0.24em] text-secondary">
                       {fileMeta.label}
                     </p>
-                    <input
-                      value={formState.title ?? document.fileName ?? ""}
-                      onChange={(event) =>
-                        handleFieldChange("title", event.target.value)
-                      }
-                      className="w-full truncate border-none bg-transparent px-0 text-xl font-semibold text-foreground outline-none ring-0 focus:ring-0"
-                      placeholder={document.fileName ?? ""}
-                    />
+                    {readOnly ? (
+                      <h2 className="truncate text-xl font-semibold text-foreground">
+                        {formState.title ?? document.fileName ?? "Untitled"}
+                      </h2>
+                    ) : (
+                      <input
+                        value={formState.title ?? document.fileName ?? ""}
+                        onChange={(event) =>
+                          handleFieldChange("title", event.target.value)
+                        }
+                        className="w-full truncate border-none bg-transparent px-0 text-xl font-semibold text-foreground outline-none ring-0 focus:ring-0"
+                        placeholder={document.fileName ?? ""}
+                      />
+                    )}
                     <p className="truncate text-sm text-secondary">
                       {document.fileName}
                     </p>
@@ -302,132 +342,180 @@ export function DocumentDetails({
                     <Folder className="h-4 w-4" />
                     Folder
                   </div>
-                  <select
-                    value={formState.folderId ?? ""}
-                    onChange={(event) =>
-                      handleFieldChange(
-                        "folderId",
-                        event.target.value || undefined,
-                      )
-                    }
-                    disabled={isFoldersLoading}
-                    className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
-                  >
-                    <option value="">Unassigned</option>
-                    {folders.map((folderOption) => (
-                      <option key={folderOption.id} value={folderOption.id}>
-                        {folderOption.name}
-                      </option>
-                    ))}
-                  </select>
+                  {readOnly ? (
+                    <p className="mt-3 text-sm font-medium text-foreground">
+                      {getFolderName(document.folder)}
+                    </p>
+                  ) : (
+                    <AppSelect
+                      className="mt-3"
+                      value={formState.folderId ?? ""}
+                      onValueChange={(value) =>
+                        handleFieldChange("folderId", value || undefined)
+                      }
+                      disabled={isFoldersLoading}
+                      placeholder="Unassigned"
+                      triggerClassName="rounded-lg bg-background"
+                      options={[
+                        { value: "", label: "Unassigned" },
+                        ...folders.map((folderOption) => ({
+                          value: folderOption.id,
+                          label: folderOption.name,
+                        })),
+                      ]}
+                    />
+                  )}
                 </div>
                 <div className="rounded border border-default bg-surface p-5">
                   <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-secondary">
                     <Tag className="h-4 w-4" />
                     Category
                   </div>
-                  <select
-                    value={formState.categoryId ?? ""}
-                    onChange={(event) =>
-                      handleFieldChange(
-                        "categoryId",
-                        event.target.value || undefined,
-                      )
-                    }
-                    disabled={isCategoriesLoading}
-                    className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
-                  >
-                    <option value="">Uncategorized</option>
-                    {categories.map((categoryOption) => (
-                      <option key={categoryOption.id} value={categoryOption.id}>
-                        {categoryOption.name}
-                      </option>
-                    ))}
-                  </select>
+                  {readOnly ? (
+                    <p className="mt-3 text-sm font-medium text-foreground">
+                      {getCategoryName(document.category)}
+                    </p>
+                  ) : (
+                    <AppSelect
+                      className="mt-3"
+                      value={formState.categoryId ?? ""}
+                      onValueChange={(value) =>
+                        handleFieldChange("categoryId", value || undefined)
+                      }
+                      disabled={isCategoriesLoading}
+                      placeholder="Uncategorized"
+                      triggerClassName="rounded-lg bg-background"
+                      options={[
+                        { value: "", label: "Uncategorized" },
+                        ...categories.map((categoryOption) => ({
+                          value: categoryOption.id,
+                          label: categoryOption.name,
+                        })),
+                      ]}
+                    />
+                  )}
                 </div>
                 <div className="rounded border border-default bg-surface p-5">
                   <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-secondary">
                     <User className="h-4 w-4" />
                     Document owner
                   </div>
-                  <input
-                    value={formState.documentOwner ?? ""}
-                    onChange={(event) =>
-                      handleFieldChange("documentOwner", event.target.value)
-                    }
-                    className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
-                    placeholder="Not specified"
-                  />
+                  {readOnly ? (
+                    <p className="mt-3 text-sm text-foreground">
+                      {formState.documentOwner?.trim() || "Not specified"}
+                    </p>
+                  ) : (
+                    <input
+                      value={formState.documentOwner ?? ""}
+                      onChange={(event) =>
+                        handleFieldChange("documentOwner", event.target.value)
+                      }
+                      className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
+                      placeholder="Not specified"
+                    />
+                  )}
                 </div>
                 <div className="rounded border border-default bg-surface p-5">
                   <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-secondary">
                     <User className="h-4 w-4" />
                     Author
                   </div>
-                  <input
-                    value={formState.author ?? ""}
-                    onChange={(event) =>
-                      handleFieldChange("author", event.target.value)
-                    }
-                    className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
-                    placeholder="Unknown"
-                  />
+                  {readOnly ? (
+                    <p className="mt-3 text-sm text-foreground">
+                      {formState.author?.trim() || "Unknown"}
+                    </p>
+                  ) : (
+                    <input
+                      value={formState.author ?? ""}
+                      onChange={(event) =>
+                        handleFieldChange("author", event.target.value)
+                      }
+                      className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
+                      placeholder="Unknown"
+                    />
+                  )}
                 </div>
                 <div className="rounded border border-default bg-surface p-5">
                   <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-secondary">
                     <Info className="h-4 w-4" />
                     Document type
                   </div>
-                  <input
-                    value={formState.documentType ?? ""}
-                    onChange={(event) =>
-                      handleFieldChange("documentType", event.target.value)
-                    }
-                    className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
-                    placeholder="Not specified"
-                  />
+                  {readOnly ? (
+                    <p className="mt-3 text-sm text-foreground">
+                      {formState.documentType?.trim() || "Not specified"}
+                    </p>
+                  ) : (
+                    <input
+                      value={formState.documentType ?? ""}
+                      onChange={(event) =>
+                        handleFieldChange("documentType", event.target.value)
+                      }
+                      className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
+                      placeholder="Not specified"
+                    />
+                  )}
                 </div>
                 <div className="rounded border border-default bg-surface p-5">
                   <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-secondary">
                     <Info className="h-4 w-4" />
                     Concerning
                   </div>
-                  <input
-                    value={formState.concerning ?? ""}
-                    onChange={(event) =>
-                      handleFieldChange("concerning", event.target.value)
-                    }
-                    className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
-                    placeholder="Not specified"
-                  />
+                  {readOnly ? (
+                    <p className="mt-3 text-sm text-foreground">
+                      {formState.concerning?.trim() || "Not specified"}
+                    </p>
+                  ) : (
+                    <input
+                      value={formState.concerning ?? ""}
+                      onChange={(event) =>
+                        handleFieldChange("concerning", event.target.value)
+                      }
+                      className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
+                      placeholder="Not specified"
+                    />
+                  )}
                 </div>
                 <div className="rounded border border-default bg-surface p-5">
                   <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-secondary">
                     <FileSearch className="h-4 w-4" />
                     Purpose
                   </div>
-                  <input
-                    value={formState.purpose ?? ""}
-                    onChange={(event) =>
-                      handleFieldChange("purpose", event.target.value)
-                    }
-                    className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
-                    placeholder="Not specified"
-                  />
+                  {readOnly ? (
+                    <p className="mt-3 text-sm text-foreground">
+                      {formState.purpose?.trim() || "Not specified"}
+                    </p>
+                  ) : (
+                    <input
+                      value={formState.purpose ?? ""}
+                      onChange={(event) =>
+                        handleFieldChange("purpose", event.target.value)
+                      }
+                      className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
+                      placeholder="Not specified"
+                    />
+                  )}
                 </div>
                 <div className="rounded border border-default bg-surface p-5">
                   <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-secondary">
                     <CalendarDays className="h-4 w-4" />
                     Document date
                   </div>
-                  <input
-                    type="date"
-                    value={dateValue}
-                    onChange={(event) =>
-                      handleFieldChange("documentDate", event.target.value)
-                    }
-                    className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
-                  />
+                  {readOnly ? (
+                    <p className="mt-3 text-sm text-foreground">
+                      {formState.documentDate
+                        ? formatDisplayDate(formState.documentDate)
+                        : "Not specified"}
+                    </p>
+                  ) : (
+                    <input
+                      type="date"
+                      value={dateValue}
+                      onChange={(event) =>
+                        handleFieldChange("documentDate", event.target.value)
+                      }
+                      className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -438,16 +526,7 @@ export function DocumentDetails({
                     Created
                   </div>
                   <p className="mt-3 text-sm text-foreground">
-                    {document.createdAt
-                      ? new Date(document.createdAt).toLocaleDateString(
-                          undefined,
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          },
-                        )
-                      : "Unknown"}
+                    {formatDisplayDate(document.createdAt)}
                   </p>
                 </div>
                 <div className="rounded border border-default bg-surface p-5">
@@ -456,25 +535,7 @@ export function DocumentDetails({
                     Updated
                   </div>
                   <p className="mt-3 text-sm text-foreground">
-                    {document.updatedAt
-                      ? new Date(document.updatedAt).toLocaleDateString(
-                          undefined,
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          },
-                        )
-                      : document.createdAt
-                        ? new Date(document.createdAt).toLocaleDateString(
-                            undefined,
-                            {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            },
-                          )
-                        : "Unknown"}
+                    {formatDisplayDate(document.updatedAt ?? document.createdAt)}
                   </p>
                 </div>
               </div>
@@ -484,48 +545,56 @@ export function DocumentDetails({
                   <FileSearch className="h-4 w-4" />
                   Summary
                 </div>
-                <textarea
-                  value={formState.summary ?? ""}
-                  onChange={(event) =>
-                    handleFieldChange("summary", event.target.value)
-                  }
-                  rows={5}
-                  className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
-                  placeholder="No summary available."
-                />
+                {readOnly ? (
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                    {formState.summary?.trim() || "No summary available."}
+                  </p>
+                ) : (
+                  <textarea
+                    value={formState.summary ?? ""}
+                    onChange={(event) =>
+                      handleFieldChange("summary", event.target.value)
+                    }
+                    rows={5}
+                    className="mt-3 w-full rounded-lg border border-default bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
+                    placeholder="No summary available."
+                  />
+                )}
               </div>
 
-              <div className="flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (document) {
-                      setFormState({
-                        title: document.title ?? document.fileName ?? "",
-                        documentOwner: document.documentOwner ?? null,
-                        author: document.author ?? null,
-                        documentType: document.documentType ?? null,
-                        concerning: document.concerning ?? null,
-                        purpose: document.purpose ?? null,
-                        documentDate: document.documentDate ?? null,
-                        summary: document.summary ?? "",
-                      });
-                      setHasChanges(false);
-                    }
-                  }}
-                  className="rounded border border-default bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)]"
-                >
-                  Reset
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={!hasChanges || updateDocument.isLoading}
-                  className="rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover disabled:opacity-50"
-                >
-                  {updateDocument.isLoading ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
+              {!readOnly ? (
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (document) {
+                        setFormState({
+                          title: document.title ?? document.fileName ?? "",
+                          documentOwner: document.documentOwner ?? null,
+                          author: document.author ?? null,
+                          documentType: document.documentType ?? null,
+                          concerning: document.concerning ?? null,
+                          purpose: document.purpose ?? null,
+                          documentDate: document.documentDate ?? null,
+                          summary: document.summary ?? "",
+                        });
+                        setHasChanges(false);
+                      }
+                    }}
+                    className="rounded border border-default bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={!hasChanges || updateDocument.isLoading}
+                    className="rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover disabled:opacity-50"
+                  >
+                    {updateDocument.isLoading ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              ) : null}
             </div>
           )}
         </div>

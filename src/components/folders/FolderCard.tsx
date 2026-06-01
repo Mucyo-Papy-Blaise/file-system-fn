@@ -2,6 +2,7 @@
 
 import { useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
+  ChevronRight,
   Folder,
   MoreHorizontal,
   Pencil,
@@ -19,6 +20,7 @@ import {
 interface FolderCardProps {
   folder: {
     id: string;
+    slug: string;
     name: string;
     itemCount?: number;
     updatedAt?: string;
@@ -31,12 +33,13 @@ interface FolderCardProps {
       name: string;
     } | null;
   };
-  onOpen: (folderId: string) => void;
-  onRename?: (folderId: string, newName: string) => void;
-  onRenameComplete?: (folderId: string, finalName: string) => void;
-  onDelete?: (folderId: string) => void;
-  onUpload?: (folderId: string) => void;
+  onOpen: (folderSlug: string) => void;
+  onRename?: (folderSlug: string, newName: string) => void;
+  onRenameComplete?: (folderSlug: string, finalName: string) => void;
+  onDelete?: (folderSlug: string) => void;
+  onUpload?: (folderSlug: string) => void;
   isOwner?: boolean;
+  readOnly?: boolean;
   startInRenameMode?: boolean;
   showDepartmentColumn?: boolean;
 }
@@ -59,6 +62,7 @@ export function FolderCard({
   onDelete,
   onUpload,
   isOwner = false,
+  readOnly = false,
   startInRenameMode = false,
   showDepartmentColumn = false,
 }: FolderCardProps) {
@@ -76,37 +80,37 @@ export function FolderCard({
     }
 
     if (trimmedName !== folder.name) {
-      onRename?.(folder.id, trimmedName);
+      onRename?.(folder.slug, trimmedName);
     }
 
     setNewName(trimmedName);
     setIsRenaming(false);
-    onRenameComplete?.(folder.id, trimmedName);
+    onRenameComplete?.(folder.slug, trimmedName);
   };
 
   const handleDeleteConfirm = () => {
-    onDelete?.(folder.id);
+    onDelete?.(folder.slug);
     setIsDeleteOpen(false);
   };
 
   const handleUploadClick = (event: ReactMouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    onUpload?.(folder.id);
+    onUpload?.(folder.slug);
   };
 
   const folderGridColumns = showDepartmentColumn
-    ? "grid-cols-[minmax(320px,1.8fr)_160px_160px_180px_minmax(140px,1fr)_132px]"
-    : "grid-cols-[minmax(320px,1.8fr)_160px_160px_minmax(140px,1fr)_132px]";
+    ? "grid-cols-[minmax(280px,2fr)_140px_140px_160px_minmax(120px,1fr)_120px]"
+    : "grid-cols-[minmax(280px,2fr)_140px_140px_minmax(120px,1fr)_120px]";
 
   return (
     <>
       <div
-        onClick={() => !isRenaming && onOpen(folder.id)}
-        className={`group grid cursor-pointer ${folderGridColumns} items-center gap-4 border-t border-default px-4 py-3 text-sm transition-colors hover:bg-[var(--color-bg-secondary)]`}
+        onClick={() => !isRenaming && onOpen(folder.slug)}
+        className={`group grid cursor-pointer ${folderGridColumns} items-center gap-4 border-t border-default px-4 py-3.5 text-sm transition-colors hover:bg-[var(--color-bg-secondary)]/80`}
       >
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-[#fff5d6]">
-            <Folder className="h-6 w-6 text-[#c88b00]" />
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50">
+            <Folder className="h-5 w-5 text-amber-600" />
           </div>
 
           <div className="min-w-0">
@@ -160,6 +164,11 @@ export function FolderCard({
         <p className="truncate text-secondary">{formatFolderItems(folder.itemCount)}</p>
 
         <div className="relative flex items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
+          {readOnly ? (
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-secondary">
+              <ChevronRight className="h-4 w-4 opacity-0 transition group-hover:opacity-100" />
+            </span>
+          ) : null}
           {onUpload ? (
             <button
               type="button"
@@ -171,7 +180,7 @@ export function FolderCard({
             </button>
           ) : null}
 
-          {isOwner ? (
+          {!readOnly && isOwner ? (
             <DropdownMenu>
               <DropdownMenuTrigger
                 className="inline-flex h-9 w-9 shrink-0 items-center justify-center border border-default text-secondary transition hover:bg-[var(--color-bg-tertiary)] hover:text-foreground"

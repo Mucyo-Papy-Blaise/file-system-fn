@@ -1,7 +1,8 @@
 "use client";
 
-import { MoreVertical, Trash2, Eye, Download } from "lucide-react";
+import { MoreVertical, Trash2, Eye, Download, Share2 } from "lucide-react";
 import { useState } from "react";
+import { ShareToSpaceModal } from "@/components/documents/ShareToSpaceModal";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -45,6 +46,7 @@ export function DocumentCard({ document, onDetails }: DocumentCardProps) {
   const deleteDocument = useDeleteDocument();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this document?")) return;
@@ -144,6 +146,13 @@ export function DocumentCard({ document, onDetails }: DocumentCardProps) {
                 <Download className="h-4 w-4" />
                 Download
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setIsShareModalOpen(true)}
+                className="flex items-center gap-2 border-b border-default text-foreground"
+              >
+                <Share2 className="h-4 w-4" />
+                Share to Space
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleDelete} disabled={isDeleting} className="text-red-600">
                 <Trash2 className="h-4 w-4" />
                 Delete
@@ -159,6 +168,11 @@ export function DocumentCard({ document, onDetails }: DocumentCardProps) {
         fileUrl={document.fileUrl}
         fileName={document.fileName}
         fileType={fileType}
+      />
+      <ShareToSpaceModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        documentId={document.id}
       />
     </>
   );

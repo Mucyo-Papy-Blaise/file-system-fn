@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Search, Filter } from "lucide-react";
+import { AppSelect } from "@/components/ui/AppSelect";
 import { useGetDocuments } from "@/lib/hooks/useDocuments";
 import { useGetCategories } from "@/lib/hooks/useCategories";
 import { DocumentCard } from "@/components/documents/DocumentCard";
@@ -70,20 +71,19 @@ export default function DocumentsPage() {
         {/* Category Filter */}
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-secondary" />
-          <select
+          <AppSelect
+            className="flex-1"
             value={filters.categoryId || ""}
-            onChange={(e) =>
-              handleCategoryFilter(e.target.value || undefined)
-            }
-            className="flex-1 rounded-2xl border border-default bg-[var(--color-bg-secondary)] px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
-          >
-            <option value="">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+            onValueChange={(value) => handleCategoryFilter(value || undefined)}
+            placeholder="All Categories"
+            options={[
+              { value: "", label: "All Categories" },
+              ...categories.map((cat) => ({
+                value: cat.id,
+                label: cat.name,
+              })),
+            ]}
+          />
         </div>
       </div>
 
