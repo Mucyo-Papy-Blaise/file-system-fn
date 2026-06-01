@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { UploadDrawer } from "@/components/upload/UploadDrawer";
 import { useDashboard } from "@/lib/dashboard-context";
 import { useAuth } from "@/lib/auth-context";
+import {
+  clearFolderNavForPath,
+  isFolderBrowserPath,
+  stripFolderSearchParam,
+} from "@/lib/folder-navigation";
 import { cn } from "@/lib/utils";
 
 interface DashboardLayoutProps {
@@ -19,14 +24,35 @@ export function DashboardLayout({
   pageTitle,
 }: DashboardLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { isUploadOpen, closeUpload, openUpload, setUploadFolderId, uploadFolderId } = useDashboard();
+  const prevPathnameRef = useRef<string | null>(null);
 
   useEffect(() => {
     setUploadFolderId(null);
   }, [pathname, setUploadFolderId]);
+
+  useEffect(() => {
+    const previousPath = prevPathnameRef.current;
+
+    if (previousPath !== null && previousPath !== pathname) {
+      if (isFolderBrowserPath(previousPath)) {
+        clearFolderNavForPath(previousPath);
+      }
+
+      if (isFolderBrowserPath(pathname)) {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has("folder")) {
+          router.replace(stripFolderSearchParam(pathname), { scroll: false });
+        }
+      }
+    }
+
+    prevPathnameRef.current = pathname;
+  }, [pathname, router]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,7 +76,10 @@ export function DashboardLayout({
           onMenuClick={() => setIsSidebarOpen(true)}
           onUploadClick={openUpload}
         />
-        <main className="min-h-[calc(100vh-4rem)] bg-[var(--color-bg-secondary)] p-4 sm:p-6">
+        <main
+          key={pathname}
+          className="min-h-[calc(100vh-4rem)] bg-[var(--color-bg-secondary)] p-4 sm:p-6"
+        >
           {children}
         </main>
       </div>

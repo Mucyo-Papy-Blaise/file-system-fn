@@ -10,6 +10,7 @@ import {
   FileText,
   MoreHorizontal,
   Pencil,
+  Share2,
   Trash2,
 } from "lucide-react";
 import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
@@ -39,6 +40,7 @@ interface DocumentCardProps {
   onDetails?: (documentId: string) => void;
   onDownload?: (documentId: string) => void;
   onRename?: (documentId: string, newName: string) => void;
+  onShare?: (documentId: string, documentName: string) => void;
   isOwner?: boolean;
   readOnly?: boolean;
   showDepartmentColumn?: boolean;
@@ -92,6 +94,7 @@ export function DocumentCard({
   onDetails,
   onDownload,
   onRename,
+  onShare,
   isOwner = false,
   readOnly = false,
   showDepartmentColumn = false,
@@ -280,6 +283,20 @@ export function DocumentCard({
                 <Download className="h-4 w-4" />
                 Download
               </DropdownMenuItem>
+              {onShare ? (
+                <DropdownMenuItem
+                  onClick={() =>
+                    onShare(
+                      document.id,
+                      document.title || document.fileName,
+                    )
+                  }
+                  className="flex items-center gap-2 border-b border-default text-foreground"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Share
+                </DropdownMenuItem>
+              ) : null}
               {isOwner ? (
                 <DropdownMenuItem
                   onClick={() => {
@@ -313,8 +330,8 @@ export function DocumentCard({
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={handleDeleteConfirm}
-        title="Delete Document"
-        description={`Are you sure you want to delete "${displayName}"? This action cannot be undone.`}
+        title="Move to trash?"
+        description={`"${displayName}" will be moved to trash for 30 days. You can restore it from Trash.`}
         itemNameToConfirm={displayName}
       />
 

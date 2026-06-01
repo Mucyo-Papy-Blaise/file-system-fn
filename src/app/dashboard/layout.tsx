@@ -15,6 +15,8 @@ const pageTitles: Record<string, string> = {
   "/dashboard/my-folders": "My Folders",
   "/dashboard/folders": "Folders",
   "/dashboard/inbox": "Inbox",
+  "/dashboard/trash": "Trash",
+  "/dashboard/notifications": "Notifications",
   "/dashboard/unsorted": "Unsorted",
   "/dashboard/documents": "My Documents",
   "/dashboard/categories": "Categories",

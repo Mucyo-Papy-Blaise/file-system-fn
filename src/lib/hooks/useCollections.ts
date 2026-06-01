@@ -2,6 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { collectionApi } from "@/api/collection.api";
+import {
+  invalidateTrashRelatedQueries,
+  showMovedToTrashToast,
+} from "@/lib/trash-toast";
 import type {
   CreateCollectionInput,
   Collection,
@@ -74,13 +78,15 @@ export function useDeleteCollection() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (slug: string) => collectionApi.deleteCollection(slug),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["collections"] });
+    onSuccess: async (trashItem) => {
+      await invalidateTrashRelatedQueries(queryClient);
+      showMovedToTrashToast(trashItem.id, queryClient);
     },
   });
 
   return {
     mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
     isLoading: mutation.isPending,
     isError: mutation.isError,
   };

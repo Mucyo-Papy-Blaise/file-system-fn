@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Bell, ChevronDown, LibraryBig, Menu, Search } from "lucide-react";
+import { ChevronDown, LibraryBig, Menu, Search } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
@@ -150,13 +151,7 @@ export function TopBar({ pageTitle, onMenuClick, onUploadClick }: TopBarProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="rounded-xl p-2 text-secondary transition hover:bg-[var(--color-bg-secondary)] hover:text-foreground"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5" />
-        </button>
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger

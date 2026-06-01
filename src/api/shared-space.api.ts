@@ -1,4 +1,6 @@
 import { apiClient } from "@/api/api-client";
+import { normalizeTrashItem } from "@/api/trash.api";
+import type { TrashItem } from "@/types/trash";
 import type { ApiSuccessEnvelope } from "@/types/http";
 import type { Document } from "@/types/document";
 import type {
@@ -174,12 +176,12 @@ export const sharedSpaceApi = {
     return normalizeSharedSpace(response.data);
   },
 
-  async deleteSharedSpace(id: string): Promise<SharedSpace> {
-    const response = await apiClient.delete<ApiSuccessEnvelope<SharedSpaceApiRecord>>(
+  async deleteSharedSpace(id: string): Promise<TrashItem> {
+    const response = await apiClient.delete<ApiSuccessEnvelope<Parameters<typeof normalizeTrashItem>[0]>>(
       `/shared-spaces/${encodeURIComponent(id)}`,
     );
 
-    return normalizeSharedSpace(response.data);
+    return normalizeTrashItem(response.data);
   },
 
   async shareDocument(spaceId: string, documentId: string): Promise<SharedSpace> {

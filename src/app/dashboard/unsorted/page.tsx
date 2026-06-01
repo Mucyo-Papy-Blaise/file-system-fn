@@ -7,13 +7,20 @@ import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { SortBar } from "@/components/ui/SortBar";
 import { DocumentDetails } from "@/components/documents/DocumentDetails";
 import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
+import { documentApi } from "@/api/document.api";
 import { useGetInbox, useDeleteDocument } from "@/lib/hooks/useDocuments";
+import {
+  invalidateTrashRelatedQueries,
+  showMovedToTrashToast,
+} from "@/lib/trash-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { SortOption, Document } from "@/types/document";
 
 export default function DashboardUnsortedPage() {
   const { documents, isLoading } = useGetInbox();
   const deleteDocument = useDeleteDocument();
+  const queryClient = useQueryClient();
 
   const [sortBy, setSortBy] = useState<SortOption>("date_desc");
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
@@ -107,7 +114,6 @@ export default function DashboardUnsortedPage() {
     if (deleteMode === "single" && documentToDelete) {
       try {
         await deleteDocument.mutateAsync(documentToDelete.id);
-        toast.success("Document deleted successfully");
         setSelectedIds((prev) => {
           const newIds = new Set(prev);
           newIds.delete(documentToDelete.id);
@@ -118,10 +124,17 @@ export default function DashboardUnsortedPage() {
       }
     } else if (deleteMode === "multiple") {
       try {
-        await Promise.all(
-          Array.from(selectedIds).map((id) => deleteDocument.mutateAsync(id)),
+        const trashItems = await Promise.all(
+          Array.from(selectedIds).map((id) => documentApi.deleteDocument(id)),
         );
-        toast.success(`${selectedIds.size} documents deleted successfully`);
+        await invalidateTrashRelatedQueries(queryClient);
+        if (trashItems.length === 1) {
+          showMovedToTrashToast(trashItems[0].id, queryClient);
+        } else {
+          toast.success(
+            `${trashItems.length} documents moved to trash`,
+          );
+        }
         setSelectedIds(new Set());
       } catch {
         toast.error("Failed to delete documents");
@@ -358,13 +371,13 @@ export default function DashboardUnsortedPage() {
         onConfirm={handleDeleteConfirm}
         title={
           deleteMode === "multiple"
-            ? `Delete ${selectedIds.size} documents?`
-            : "Delete document?"
+            ? `Move ${selectedIds.size} documents to trash?`
+            : "Move to trash?"
         }
         description={
           deleteMode === "multiple"
-            ? `Are you sure you want to delete ${selectedIds.size} selected documents? This action cannot be undone.`
-            : `Are you sure you want to delete "${documentToDelete?.fileName}"? This action cannot be undone.`
+            ? `${selectedIds.size} selected documents will be moved to trash for 30 days.`
+            : `"${documentToDelete?.fileName}" will be moved to trash for 30 days. You can restore it from Trash.`
         }
         isLoading={deleteDocument.isLoading}
         itemNameToConfirm={deleteConfirmationText}

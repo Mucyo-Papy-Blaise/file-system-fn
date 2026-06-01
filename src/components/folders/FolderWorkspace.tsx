@@ -15,6 +15,7 @@ import { Breadcrumb } from "@/components/folders/Breadcrumb";
 import { DocumentCard } from "@/components/folders/DocumentCard";
 import { FolderCard } from "@/components/folders/FolderCard";
 import { DocumentDetails } from "@/components/documents/DocumentDetails";
+import { ShareModal } from "@/components/sharing/ShareModal";
 import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -35,12 +36,19 @@ import {
   ALL_SCOPE_VALUE,
   toScopeApiValue,
 } from "@/lib/shared-scope-utils";
+import {
+  buildFolderQueryString,
+  isFolderBrowserPath,
+  writeStoredFolderSlug,
+} from "@/lib/folder-navigation";
 import { Role } from "@/types/enum";
 
 interface FolderWorkspaceProps {
   title: string;
   description: string;
   currentUser: AuthUser;
+  /** From server searchParams on first paint (refresh-safe) */
+  initialFolderSlug?: string | null;
   onlyMine?: boolean;
   /** Company-wide browse: view and download only */
   readOnly?: boolean;
@@ -73,31 +81,46 @@ export function FolderWorkspace({
   title,
   description,
   currentUser,
+  initialFolderSlug = null,
   onlyMine = false,
   readOnly = false,
 }: FolderWorkspaceProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentFolderSlug = searchParams.get("folder");
+
+  const currentFolderSlug = useMemo(() => {
+    if (!isFolderBrowserPath(pathname)) {
+      return null;
+    }
+
+    return searchParams.get("folder") ?? initialFolderSlug ?? null;
+  }, [initialFolderSlug, pathname, searchParams]);
   const [pendingFolderId, setPendingFolderId] = useState<string | null>(null);
+  const [shareTarget, setShareTarget] = useState<{
+    documentId: string;
+    documentName: string;
+  } | null>(null);
   const [folderBranchId, setFolderBranchId] = useState(ALL_SCOPE_VALUE);
   const [folderDepartmentId, setFolderDepartmentId] = useState(ALL_SCOPE_VALUE);
   const isOwner = currentUser.role === Role.OWNER;
 
   const updateFolderSlug = useCallback(
     (slug: string | null) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (slug) {
-        params.set("folder", slug);
-      } else {
-        params.delete("folder");
-      }
-      const query = params.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+      writeStoredFolderSlug(pathname, slug);
+
+      router.replace(buildFolderQueryString(pathname, slug), { scroll: false });
     },
-    [pathname, router, searchParams],
+    [pathname, router],
   );
+
+  useEffect(() => {
+    if (!isFolderBrowserPath(pathname)) {
+      return;
+    }
+
+    writeStoredFolderSlug(pathname, currentFolderSlug);
+  }, [currentFolderSlug, pathname]);
   const [sortBy, setSortBy] = useState<SortOption>("date_desc");
   const { openUpload, setUploadFolderId } = useDashboard();
 
@@ -120,6 +143,23 @@ export function FolderWorkspace({
 
   const isLoading = currentFolderSlug ? isContentsLoading : isRootLoading;
   const isError = currentFolderSlug ? isContentsError : isRootError;
+
+  useEffect(() => {
+    if (
+      currentFolderSlug &&
+      !isContentsLoading &&
+      isContentsError &&
+      isFolderBrowserPath(pathname)
+    ) {
+      updateFolderSlug(null);
+    }
+  }, [
+    currentFolderSlug,
+    isContentsError,
+    isContentsLoading,
+    pathname,
+    updateFolderSlug,
+  ]);
   const showDepartmentColumn = currentUser.role === Role.OWNER;
   const isInFolder = currentFolderSlug !== null;
   const currentFolderDbId = folderContents?.folder?.id ?? null;
@@ -319,7 +359,6 @@ export function FolderWorkspace({
   const handleDeleteFolder = (folderSlug: string) => {
     deleteFolder(folderSlug, {
       onSuccess: () => {
-        toast.success("Folder deleted successfully");
         if (currentFolderSlug === folderSlug) {
           updateFolderSlug(null);
         }
@@ -350,7 +389,6 @@ export function FolderWorkspace({
 
   const handleDeleteDocument = (documentId: string) => {
     deleteDocument(documentId, {
-      onSuccess: () => toast.success("Document deleted successfully"),
       onError: (error) => {
         toast.error(
           error instanceof Error ? error.message : "Unable to delete document.",
@@ -587,6 +625,12 @@ export function FolderWorkspace({
                   onDetails={handleOpenDocumentDetails}
                   onDownload={handleDownloadDocument}
                   onRename={canManage ? handleRenameDocument : undefined}
+                  onShare={
+                    !readOnly
+                      ? (documentId, documentName) =>
+                          setShareTarget({ documentId, documentName })
+                      : undefined
+                  }
                   isOwner={canManage}
                   readOnly={readOnly}
                   showDepartmentColumn={showDepartmentColumn}
@@ -653,6 +697,13 @@ export function FolderWorkspace({
         fileUrl={previewDocument?.fileUrl ?? ""}
         fileName={previewDocument?.fileName ?? ""}
         fileType={previewDocument?.fileName ? getFileType(previewDocument.fileName) : "application/octet-stream"}
+      />
+
+      <ShareModal
+        isOpen={Boolean(shareTarget)}
+        onClose={() => setShareTarget(null)}
+        documentId={shareTarget?.documentId}
+        documentName={shareTarget?.documentName}
       />
     </div>
   );

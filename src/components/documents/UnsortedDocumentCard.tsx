@@ -59,7 +59,6 @@ export function UnsortedDocumentCard({ document }: InboxDocumentCardProps) {
   const handleDeleteConfirm = async () => {
     try {
       await deleteDocument.mutateAsync(document.id);
-      toast.success("Document deleted successfully");
     } catch (error) {
       console.error("Delete document error:", error);
       toast.error("Failed to delete document");
@@ -292,8 +291,8 @@ export function UnsortedDocumentCard({ document }: InboxDocumentCardProps) {
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={handleDeleteConfirm}
-        title="Delete Document"
-        description="This will permanently remove the document from your inbox."
+        title="Move to trash?"
+        description="This document will be moved to trash for 30 days. You can restore it from Trash."
         itemNameToConfirm={document.fileName}
         isLoading={deleteDocument.isLoading}
       />

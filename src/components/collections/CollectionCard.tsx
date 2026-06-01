@@ -1,7 +1,8 @@
 "use client";
 
-import { Library, MoreVertical, Pencil, Trash2 } from "lucide-react";
-import { type MouseEvent as ReactMouseEvent } from "react";
+import { useState, type MouseEvent as ReactMouseEvent } from "react";
+import { Library, MoreVertical, Pencil, Share2, Trash2 } from "lucide-react";
+import { ShareModal } from "@/components/sharing/ShareModal";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -10,8 +11,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Role } from "@/types/enum";
+import { SharedLevel } from "@/types/shared-space";
 import type { AuthUser } from "@/types/auth";
 import type { Collection } from "@/types/collection";
+import { canManageScopedResource } from "@/lib/shared-scope-utils";
 
 interface CollectionCardProps {
   collection: Collection;
@@ -26,15 +29,21 @@ export function CollectionCard({
   onEdit,
   onDelete,
 }: CollectionCardProps) {
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const isCreator = currentUser?.id === collection.createdBy.id;
   const canManageScope =
     currentUser?.role === Role.OWNER ||
     currentUser?.role === Role.BRANCH_MANAGER ||
     currentUser?.role === Role.DEPT_MANAGER;
-  const canModify = isCreator || canManageScope;
+  const canModify = collection.isShared
+    ? canManageScopedResource(currentUser, {
+        level: collection.level ?? SharedLevel.ORGANIZATION,
+        branchId: collection.branchId,
+        departmentId: collection.departmentId,
+      })
+    : isCreator || canManageScope;
 
   const handleMenuClick = (e: ReactMouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
     e.stopPropagation();
   };
 
@@ -102,6 +111,13 @@ export function CollectionCard({
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
+                onClick={() => setIsShareOpen(true)}
+                className="flex items-center gap-2 text-foreground"
+              >
+                <Share2 className="h-4 w-4" />
+                Share
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 onClick={handleDeleteClick}
                 className="text-red-600"
               >
@@ -112,6 +128,13 @@ export function CollectionCard({
           </DropdownMenu>
         ) : null}
       </div>
+
+      <ShareModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        collectionId={collection.id}
+        documentName={collection.name}
+      />
     </div>
   );
 }

@@ -2,6 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { sharedSpaceApi } from "@/api/shared-space.api";
+import {
+  invalidateTrashRelatedQueries,
+  showMovedToTrashToast,
+} from "@/lib/trash-toast";
 import type {
   CreateSharedSpaceInput,
   UpdateSharedSpaceInput,
@@ -77,8 +81,9 @@ export function useDeleteSharedSpace() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (id: string) => sharedSpaceApi.deleteSharedSpace(id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["shared-spaces"] });
+    onSuccess: async (trashItem) => {
+      await invalidateTrashRelatedQueries(queryClient);
+      showMovedToTrashToast(trashItem.id, queryClient);
     },
   });
 

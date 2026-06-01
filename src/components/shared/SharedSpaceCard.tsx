@@ -10,9 +10,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SharedLevelBadge } from "@/components/shared/SharedLevelBadge";
-import { Role } from "@/types/enum";
 import type { AuthUser } from "@/types/auth";
 import type { SharedSpace } from "@/types/shared-space";
+import { canManageScopedResource } from "@/lib/shared-scope-utils";
 
 interface SharedSpaceCardProps {
   sharedSpace: SharedSpace;
@@ -27,12 +27,11 @@ export function SharedSpaceCard({
   onEdit,
   onDelete,
 }: SharedSpaceCardProps) {
-  const isCreator = currentUser?.id === sharedSpace.createdBy.id;
-  const canManageRole =
-    currentUser?.role === Role.OWNER ||
-    currentUser?.role === Role.BRANCH_MANAGER ||
-    currentUser?.role === Role.DEPT_MANAGER;
-  const canModify = Boolean(isCreator && canManageRole);
+  const canModify = canManageScopedResource(currentUser, {
+    level: sharedSpace.level,
+    branchId: sharedSpace.branchId,
+    departmentId: sharedSpace.departmentId,
+  });
 
   const createdDate = new Date(sharedSpace.createdAt).toLocaleDateString("en-US", {
     month: "short",
@@ -41,7 +40,6 @@ export function SharedSpaceCard({
   });
 
   const handleMenuClick = (e: ReactMouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
     e.stopPropagation();
   };
 
@@ -77,7 +75,7 @@ export function SharedSpaceCard({
       </Link>
 
       {canModify ? (
-        <div className="absolute right-3 top-3">
+        <div className="absolute right-3 top-3 z-10">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button

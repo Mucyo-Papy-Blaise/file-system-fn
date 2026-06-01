@@ -2,6 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { documentApi } from "@/api/document.api";
+import {
+  invalidateTrashRelatedQueries,
+  showMovedToTrashToast,
+} from "@/lib/trash-toast";
 import { toast } from "sonner";
 import { useEffect, useRef } from "react";
 import type {
@@ -85,7 +89,7 @@ export function useConfirmDocument() {
     mutationFn: ({ id, data }: { id: string; data: ConfirmDocumentData }) =>
       documentApi.confirmDocument(id, data),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      await queryClient.invalidateQueries({ queryKey: ["tray"] });
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
   });
@@ -121,9 +125,9 @@ export function useDeleteDocument() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (id: string) => documentApi.deleteDocument(id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["documents"] });
-      await queryClient.invalidateQueries({ queryKey: ["folders"] });
+    onSuccess: async (trashItem) => {
+      await invalidateTrashRelatedQueries(queryClient);
+      showMovedToTrashToast(trashItem.id, queryClient);
     },
   });
 
@@ -146,7 +150,7 @@ export function useBulkUpload() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
-      await queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      await queryClient.invalidateQueries({ queryKey: ["tray"] });
     },
   });
 
@@ -166,7 +170,7 @@ export function useMoveToFolder() {
       documentApi.moveToFolder(id, { folderId }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
-      await queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      await queryClient.invalidateQueries({ queryKey: ["tray"] });
       await queryClient.invalidateQueries({ queryKey: ["folders"] });
     },
   });
@@ -187,7 +191,7 @@ export function useRenameDocument() {
       documentApi.renameDocument(id, { fileName }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
-      await queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      await queryClient.invalidateQueries({ queryKey: ["tray"] });
     },
   });
 
@@ -204,7 +208,7 @@ export function useGetInbox() {
   const prevRef = useRef<Document[] | null>(null);
 
   const query = useQuery<Document[], Error, Document[]>({
-    queryKey: ["inbox"],
+    queryKey: ["tray"],
     queryFn: () => documentApi.getInbox(),
     refetchInterval: (query) => {
       const data = query.state.data;

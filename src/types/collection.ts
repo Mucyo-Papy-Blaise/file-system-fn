@@ -8,6 +8,8 @@ export interface Collection {
   description?: string | null;
   isShared: boolean;
   level?: SharedLevel | null;
+  branchId?: string | null;
+  departmentId?: string | null;
   createdAt: string;
   updatedAt: string;
   createdBy: {

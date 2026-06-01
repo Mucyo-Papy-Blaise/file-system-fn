@@ -1,4 +1,6 @@
 import { apiClient } from "@/api/api-client";
+import { normalizeTrashItem } from "@/api/trash.api";
+import type { TrashItem } from "@/types/trash";
 import type { ApiSuccessEnvelope } from "@/types/http";
 import type {
   AddDocumentInput,
@@ -65,6 +67,8 @@ type CollectionApiRecord = {
   description?: string | null;
   isShared?: boolean;
   level?: SharedLevel | null;
+  branchId?: string | null;
+  departmentId?: string | null;
   organizationId: string;
   createdAt: string;
   updatedAt: string;
@@ -133,6 +137,8 @@ function normalizeCollection(collection: CollectionApiRecord): Collection {
     description: collection.description ?? null,
     isShared: collection.isShared ?? false,
     level: collection.level ?? null,
+    branchId: collection.branchId ?? null,
+    departmentId: collection.departmentId ?? null,
     organizationId: collection.organizationId,
     documentCount,
     createdBy,
@@ -183,12 +189,12 @@ export const collectionApi = {
     return normalizeCollection(response.data);
   },
 
-  async deleteCollection(slug: string): Promise<Collection> {
-    const response = await apiClient.delete<ApiSuccessEnvelope<CollectionApiRecord>>(
+  async deleteCollection(slug: string): Promise<TrashItem> {
+    const response = await apiClient.delete<ApiSuccessEnvelope<Parameters<typeof normalizeTrashItem>[0]>>(
       `/collections/${encodeURIComponent(slug)}`,
     );
 
-    return normalizeCollection(response.data);
+    return normalizeTrashItem(response.data);
   },
 
   async addDocument(

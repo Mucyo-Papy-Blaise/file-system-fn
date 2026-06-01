@@ -1,5 +1,35 @@
 import { Role } from "@/types/enum";
 import { SharedLevel } from "@/types/shared-space";
+import type { AuthUser } from "@/types/auth";
+
+export interface ScopedResourceRef {
+  level: SharedLevel;
+  branchId?: string | null;
+  departmentId?: string | null;
+}
+
+/** Mirrors backend canManageSharedSpace / canManageCollection for shared resources. */
+export function canManageScopedResource(
+  user: AuthUser | null | undefined,
+  resource: ScopedResourceRef,
+): boolean {
+  if (!user) return false;
+  if (user.role === Role.MEMBER) return false;
+  if (user.role === Role.OWNER) return true;
+
+  if (user.role === Role.BRANCH_MANAGER && resource.level === SharedLevel.BRANCH) {
+    return !resource.branchId || resource.branchId === user.branchId;
+  }
+
+  if (user.role === Role.DEPT_MANAGER && resource.level === SharedLevel.DEPARTMENT) {
+    if (resource.branchId && resource.branchId !== user.branchId) {
+      return false;
+    }
+    return !resource.departmentId || resource.departmentId === user.departmentId;
+  }
+
+  return false;
+}
 
 /** Sentinel for "All" in AppSelect (empty string is reserved). */
 export const ALL_SCOPE_VALUE = "__all__";

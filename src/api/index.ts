@@ -12,3 +12,7 @@ export * from "./health.api";
 export * from "./query-client";
 export * from "./search.api";
 export * from "./analytics.api";
+export * from "./sharing.api";
+export * from "./notification.api";
+export * from "./user.api";
+export * from "./trash.api";

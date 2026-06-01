@@ -1,5 +1,7 @@
 import { apiClient } from "@/api/api-client";
 import type { ApiSuccessEnvelope } from "@/types/http";
+import { normalizeTrashItem } from "@/api/trash.api";
+import type { TrashItem } from "@/types/trash";
 import type {
   CreateDocumentInput,
   Document,
@@ -165,12 +167,12 @@ export const documentApi = {
     return normalizeDocument(response.data);
   },
 
-  async deleteDocument(id: string): Promise<Document> {
-    const response = await apiClient.delete<ApiSuccessEnvelope<DocumentApiRecord>>(
+  async deleteDocument(id: string): Promise<TrashItem> {
+    const response = await apiClient.delete<ApiSuccessEnvelope<Parameters<typeof normalizeTrashItem>[0]>>(
       `/documents/${id}`,
     );
 
-    return normalizeDocument(response.data);
+    return normalizeTrashItem(response.data);
   },
 
   async bulkUpload(files: File[], folderId?: string): Promise<{ saved: Document[]; failed: string[] }> {

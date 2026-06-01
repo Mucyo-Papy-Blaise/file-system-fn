@@ -2,6 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { folderApi } from "@/api/folder.api";
+import {
+  invalidateTrashRelatedQueries,
+  showMovedToTrashToast,
+} from "@/lib/trash-toast";
 import type { CreateFolderInput, FolderContents, Folder, UpdateFolderInput } from "@/types/folder";
 
 export function useGetRootFolders(options?: { mine?: boolean; enabled?: boolean }) {
@@ -69,8 +73,9 @@ export function useDeleteFolder() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (slug: string) => folderApi.deleteFolder(slug),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["folders"] });
+    onSuccess: async (trashItem) => {
+      await invalidateTrashRelatedQueries(queryClient);
+      showMovedToTrashToast(trashItem.id, queryClient);
     },
   });
 

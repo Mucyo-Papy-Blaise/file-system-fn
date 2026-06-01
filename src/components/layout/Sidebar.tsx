@@ -8,6 +8,7 @@ import {
   Folder,
   FolderOpen,
   GitBranch,
+  Inbox,
   LayersIcon,
   LayoutDashboard,
   LibraryBig,
@@ -16,11 +17,14 @@ import {
   PanelLeftOpen,
   Search,
   Tag,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useGetInbox } from "@/lib/hooks/useDocuments";
+import { useGetInbox as useGetTrayInbox } from "@/lib/hooks/useDocuments";
+import { useGetInbox as useGetShareInbox } from "@/lib/hooks/useSharing";
+import { useGetTrash } from "@/lib/hooks/useTrash";
 import type { Document } from "@/types/document";
 import { Role } from "@/types/enum";
 import type { AuthUser } from "@/types/auth";
@@ -110,9 +114,21 @@ const navItems: NavItem[] = [
     roles: [Role.OWNER, Role.BRANCH_MANAGER, Role.DEPT_MANAGER],
   },
   {
+    href: "/dashboard/inbox",
+    label: "Inbox",
+    icon: Inbox,
+    roles: [Role.OWNER, Role.BRANCH_MANAGER, Role.DEPT_MANAGER, Role.MEMBER],
+  },
+  {
     href: "/dashboard/unsorted",
     label: "Tray",
     icon: LayersIcon,
+    roles: [Role.OWNER, Role.BRANCH_MANAGER, Role.DEPT_MANAGER, Role.MEMBER],
+  },
+  {
+    href: "/dashboard/trash",
+    label: "Trash",
+    icon: Trash2,
     roles: [Role.OWNER, Role.BRANCH_MANAGER, Role.DEPT_MANAGER, Role.MEMBER],
   },
 ];
@@ -137,7 +153,10 @@ export function Sidebar({
 }: SidebarProps) {
 
   const role = user?.role ?? Role.MEMBER;
-  const { documents: inboxDocuments } = useGetInbox();
+  const { documents: inboxDocuments } = useGetTrayInbox();
+  const { shares: receivedShares } = useGetShareInbox();
+  const { items: trashItems } = useGetTrash();
+  const trashCount = trashItems.length;
   const safeInboxDocuments: Document[] = Array.isArray(inboxDocuments)
     ? inboxDocuments
     : [];
@@ -147,7 +166,8 @@ export function Sidebar({
   const readyCount = safeInboxDocuments.filter(
     (d) => d.processingStatus === "ready",
   ).length;
-  const inboxCount = processingCount + readyCount;
+  const trayCount = processingCount + readyCount;
+  const shareInboxUnreadCount = receivedShares.filter((share) => !share.isRead).length;
 
   const visibleItems = navItems.filter(
     (item) => user && item.roles.includes(user.role),
@@ -269,7 +289,12 @@ export function Sidebar({
                   <>
                     <span className="flex-1 truncate">{item.label}</span>
 
-                    {item.href === "/dashboard/unsorted" && inboxCount > 0 && (
+                    {item.href === "/dashboard/inbox" && shareInboxUnreadCount > 0 && (
+                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-blue-700">
+                        {shareInboxUnreadCount}
+                      </span>
+                    )}
+                    {item.href === "/dashboard/unsorted" && trayCount > 0 && (
                       <span
                         className={[
                           "rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums",
@@ -278,7 +303,12 @@ export function Sidebar({
                             : "bg-blue-100 text-blue-700",
                         ].join(" ")}
                       >
-                        {inboxCount}
+                        {trayCount}
+                      </span>
+                    )}
+                    {item.href === "/dashboard/trash" && trashCount > 0 && (
+                      <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-neutral-700">
+                        {trashCount}
                       </span>
                     )}
                   </>
@@ -286,14 +316,24 @@ export function Sidebar({
 
                 {/* Collapsed: badge dot only */}
                 {collapsed &&
+                  item.href === "/dashboard/inbox" &&
+                  shareInboxUnreadCount > 0 && (
+                    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-blue-500" />
+                  )}
+                {collapsed &&
                   item.href === "/dashboard/unsorted" &&
-                  inboxCount > 0 && (
+                  trayCount > 0 && (
                     <span
                       className={[
                         "absolute right-1.5 top-1.5 h-2 w-2 rounded-full",
                         processingCount > 0 ? "bg-amber-400" : "bg-blue-500",
                       ].join(" ")}
                     />
+                  )}
+                {collapsed &&
+                  item.href === "/dashboard/trash" &&
+                  trashCount > 0 && (
+                    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-neutral-500" />
                   )}
               </Link>
             );

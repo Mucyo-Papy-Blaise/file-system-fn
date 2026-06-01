@@ -217,8 +217,8 @@ export function FolderCard({
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={handleDeleteConfirm}
-        title="Delete Folder"
-        description={`Are you sure you want to delete "${folder.name}"? This action cannot be undone.`}
+        title="Move to trash?"
+        description={`"${folder.name}" and its contents will be moved to trash for 30 days. You can restore them from Trash.`}
         itemNameToConfirm={folder.name}
       />
     </>

@@ -1,22 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { Library, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { useGetCollections } from "@/lib/hooks/useCollections";
+import { useGetCollections, useDeleteCollection } from "@/lib/hooks/useCollections";
+import { CollectionCard } from "@/components/collections/CollectionCard";
+import { EditCollectionModal } from "@/components/collections/EditCollectionModal";
 import { useGetSharedSpaces, useDeleteSharedSpace } from "@/lib/hooks/useSharedSpaces";
 import { SharedSpaceCard } from "@/components/shared/SharedSpaceCard";
 import { CreateSharedSpaceModal } from "@/components/shared/CreateSharedSpaceModal";
 import { EditSharedSpaceModal } from "@/components/shared/EditSharedSpaceModal";
 import { CreateCollectionModal } from "@/components/collections/CreateCollectionModal";
-import { SharedLevelBadge } from "@/components/shared/SharedLevelBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
 import { SharedLevel } from "@/types/shared-space";
 import { Role } from "@/types/enum";
 import type { SharedSpace } from "@/types/shared-space";
+import type { Collection } from "@/types/collection";
 import { toast } from "sonner";
 
 type TabId = "spaces" | "collections";
@@ -28,6 +29,7 @@ export default function SharedDashboardPage() {
   const { sharedCollections, isLoading: isCollectionsLoading } =
     useGetCollections();
   const deleteSharedSpace = useDeleteSharedSpace();
+  const deleteCollection = useDeleteCollection();
 
   const [activeTab, setActiveTab] = useState<TabId>("spaces");
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("ALL");
@@ -35,6 +37,8 @@ export default function SharedDashboardPage() {
   const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
   const [editingSpace, setEditingSpace] = useState<SharedSpace | null>(null);
   const [deletingSpace, setDeletingSpace] = useState<SharedSpace | null>(null);
+  const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
+  const [deletingCollection, setDeletingCollection] = useState<Collection | null>(null);
 
   const isMember = user?.role === Role.MEMBER;
 
@@ -48,11 +52,23 @@ export default function SharedDashboardPage() {
 
     try {
       await deleteSharedSpace.mutateAsync(deletingSpace.id);
-      toast.success("Shared space deleted successfully");
       setDeletingSpace(null);
     } catch {
       toast.error("Failed to delete shared space");
     }
+  };
+
+  const handleDeleteCollection = () => {
+    if (!deletingCollection) return;
+
+    deleteCollection.mutate(deletingCollection.slug, {
+      onSuccess: () => {
+        setDeletingCollection(null);
+      },
+      onError: () => {
+        toast.error("Failed to delete shared collection");
+      },
+    });
   };
 
   const levelPills: { id: LevelFilter; label: string }[] = [
@@ -195,39 +211,22 @@ export default function SharedDashboardPage() {
               />
             )
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="overflow-x-auto rounded border border-default bg-surface">
+              <div className="grid gap-4 border-b border-default px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-secondary md:grid-cols-[2.5fr_1fr_1fr_1fr_auto]">
+                <span>Name</span>
+                <span>Owner</span>
+                <span>Created</span>
+                <span>Documents</span>
+                <span className="text-right">Actions</span>
+              </div>
               {sharedCollections.map((collection) => (
-                <Link
+                <CollectionCard
                   key={collection.id}
-                  href={`/dashboard/collections/${collection.slug}`}
-                  className="rounded-2xl border border-default bg-surface p-5 shadow-sm transition hover:border-primary/40"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="grid h-11 w-11 place-items-center rounded-xl bg-[var(--color-bg-secondary)] text-primary">
-                      <Library className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="truncate text-base font-semibold text-foreground">
-                        {collection.name}
-                      </h3>
-                      <p className="mt-1 line-clamp-2 text-sm text-secondary">
-                        {collection.description ?? "No description"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {collection.level ? (
-                      <SharedLevelBadge level={collection.level} />
-                    ) : null}
-                    <span className="text-xs text-secondary">
-                      {collection.documentCount}{" "}
-                      {collection.documentCount === 1 ? "document" : "documents"}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs text-secondary">
-                    {collection.createdBy.name}
-                  </p>
-                </Link>
+                  collection={collection}
+                  currentUser={user}
+                  onEdit={setEditingCollection}
+                  onDelete={setDeletingCollection}
+                />
               ))}
             </div>
           )}
@@ -248,14 +247,28 @@ export default function SharedDashboardPage() {
         onClose={() => setEditingSpace(null)}
         sharedSpace={editingSpace}
       />
+      <EditCollectionModal
+        isOpen={Boolean(editingCollection)}
+        onClose={() => setEditingCollection(null)}
+        collection={editingCollection}
+      />
       <DeleteConfirmationModal
         isOpen={Boolean(deletingSpace)}
         onClose={() => setDeletingSpace(null)}
         onConfirm={() => void handleDeleteSpace()}
-        title="Delete Shared Space"
-        description="This removes the shared space and all document references. Files on Cloudinary are not deleted."
+        title="Move to trash?"
+        description="This shared space will be moved to trash for 30 days. You can restore it from Trash before it is permanently deleted."
         itemNameToConfirm={deletingSpace?.name ?? ""}
         isLoading={deleteSharedSpace.isLoading}
+      />
+      <DeleteConfirmationModal
+        isOpen={Boolean(deletingCollection)}
+        onClose={() => setDeletingCollection(null)}
+        onConfirm={handleDeleteCollection}
+        title="Move to trash?"
+        description="This collection will be moved to trash for 30 days. Documents in your library are not deleted."
+        itemNameToConfirm={deletingCollection?.name ?? ""}
+        isLoading={deleteCollection.isLoading}
       />
     </div>
   );

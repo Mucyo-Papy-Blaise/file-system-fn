@@ -132,15 +132,8 @@ export default function CollectionsPage() {
     if (!deletingCollection) return;
 
     try {
-      await deleteCollection.mutate(deletingCollection.slug, {
-        onSuccess: () => {
-          toast.success("Collection deleted successfully");
-          setDeletingCollection(null);
-        },
-        onError: () => {
-          toast.error("Failed to delete collection");
-        },
-      });
+      await deleteCollection.mutateAsync(deletingCollection.slug);
+      setDeletingCollection(null);
     } catch (error) {
       toast.error("Failed to delete collection");
     }
@@ -319,8 +312,8 @@ export default function CollectionsPage() {
         isOpen={Boolean(deletingCollection)}
         onClose={() => setDeletingCollection(null)}
         onConfirm={handleDeleteConfirm}
-        title="Delete Collection"
-        description="Are you sure you want to delete this collection? This action cannot be undone."
+        title="Move to trash?"
+        description="This collection will be moved to trash for 30 days. You can restore it from Trash before it is permanently deleted."
         itemNameToConfirm={deletingCollection?.name ?? ""}
         isLoading={deleteCollection.isLoading}
       />

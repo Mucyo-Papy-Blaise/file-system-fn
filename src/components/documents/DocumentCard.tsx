@@ -49,12 +49,11 @@ export function DocumentCard({ document, onDetails }: DocumentCardProps) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this document?")) return;
+    if (!confirm("Move this document to trash?")) return;
 
     setIsDeleting(true);
     try {
       await deleteDocument.mutateAsync(document.id);
-      toast.success("Document deleted successfully");
     } catch (error) {
       toast.error("Failed to delete document");
     } finally {
