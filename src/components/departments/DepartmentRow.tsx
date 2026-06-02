@@ -1,8 +1,16 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { Building, MoreVertical, Pencil, Trash2, UserPlus } from "lucide-react";
 import type { Department } from "@/types/department";
 import { useGetDepartmentBySlug } from "@/lib/hooks/useDepartments";
 import { Role } from "@/types/enum";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface DepartmentRowProps {
   department: Department;
@@ -19,47 +27,90 @@ export function DepartmentRow({
   onDelete,
   isBusy = false,
 }: DepartmentRowProps) {
+  const router = useRouter();
   const createdAt = new Date(department.createdAt).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+  const detailHref = `/dashboard/departments/${department.slug}`;
+
+  const openDetail = () => {
+    router.push(detailHref);
+  };
 
   return (
-    <tr className="border-t border-default text-sm text-foreground">
-      <td className="px-4 py-4 align-top">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">{department.name}</p>
-          <p className="mt-1 truncate text-xs text-secondary">Slug: {department.slug}</p>
+    <tr
+      role="link"
+      tabIndex={0}
+      onClick={openDetail}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openDetail();
+        }
+      }}
+      className="group cursor-pointer border-t border-default transition-colors hover:bg-[var(--color-bg-secondary)]/70"
+    >
+      <td className="px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary">
+            <Building className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-foreground group-hover:text-primary">
+              {department.name}
+            </p>
+            {department.branch ? (
+              <p className="mt-0.5 truncate text-xs text-muted">
+                {department.branch.name}
+              </p>
+            ) : (
+              <p className="mt-0.5 truncate text-xs text-muted">/{department.slug}</p>
+            )}
+          </div>
         </div>
       </td>
-      <td className="px-4 py-4 align-top text-secondary">{department.memberCount}</td>
-      <td className="px-4 py-4 align-top text-secondary">{department.folderCount}</td>
-      <td className="px-4 py-4 align-top text-secondary">{createdAt}</td>
-      <td className="px-4 py-4 align-top text-right">
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={onEdit}
-            disabled={isBusy}
-            className="rounded-full border border-default bg-surface px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Edit
-          </button>
-          {/* fetch department details to determine if an admin already exists */}
+      <td className="px-5 py-4 tabular-nums text-secondary">
+        {department.memberCount}
+      </td>
+      <td className="px-5 py-4 tabular-nums text-secondary">
+        {department.folderCount}
+      </td>
+      <td className="px-5 py-4 text-secondary">{createdAt}</td>
+      <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-end gap-2">
           <DepartmentAdminAction
             departmentSlug={department.slug}
             onInvite={onInviteAdmin}
             isBusy={isBusy}
           />
-          <button
-            type="button"
-            onClick={onDelete}
-            disabled={isBusy}
-            className="rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Delete
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="inline-flex rounded-lg p-2 text-muted transition hover:bg-[var(--color-bg-secondary)] hover:text-foreground"
+              ariaLabel={`Actions for ${department.name}`}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[180px]">
+              <DropdownMenuItem
+                onClick={onEdit}
+                disabled={isBusy}
+                className="flex items-center gap-2"
+              >
+                <Pencil className="h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={onDelete}
+                disabled={isBusy}
+                className="flex items-center gap-2 text-red-600"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </td>
     </tr>
@@ -81,37 +132,33 @@ function DepartmentAdminAction({
 
   if (isLoading) {
     return (
-      <button
-        type="button"
-        disabled
-        className="rounded-full border border-default bg-surface px-3 py-2 text-xs font-semibold text-secondary"
-      >
-        Loading...
-      </button>
+      <span className="rounded-lg px-2 py-1 text-xs text-muted">…</span>
     );
   }
 
   if (manager) {
     return (
-      <button
-        type="button"
-        disabled
-        className="rounded-full border border-default bg-surface px-3 py-2 text-xs font-semibold text-foreground/80"
-        title={`Manager: ${manager.name ?? manager.email}`}
+      <span
+        className="max-w-[140px] truncate rounded-lg bg-[var(--color-bg-secondary)] px-2.5 py-1 text-xs font-medium text-secondary"
+        title={manager.email}
       >
-        Manager: {manager.name ?? manager.email}
-      </button>
+        {manager.name}
+      </span>
     );
   }
 
   return (
     <button
       type="button"
-      onClick={onInvite}
+      onClick={(event) => {
+        event.stopPropagation();
+        onInvite();
+      }}
       disabled={isBusy}
-      className="rounded-full border border-default bg-surface px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex items-center gap-1 rounded-lg border border-default px-2.5 py-1 text-xs font-medium text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:opacity-50"
     >
-      Invite Manager
+      <UserPlus className="h-3.5 w-3.5" />
+      Invite
     </button>
   );
 }

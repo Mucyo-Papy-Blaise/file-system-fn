@@ -5,6 +5,7 @@ import type {
   SearchDocumentHit,
   SearchFilters,
   SearchResult,
+  SharedSpaceSearchResult,
 } from "@/types/search";
 import type { Folder } from "@/types/folder";
 
@@ -16,6 +17,11 @@ type CollectionSearchApiRecord = {
   documentCount: number;
 };
 
+type PaginatedApiPayload<T> = {
+  data: T[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+};
+
 type SearchApiResponse = {
   documents: {
     data: SearchDocumentHit[];
@@ -24,6 +30,14 @@ type SearchApiResponse = {
   };
   folders: {
     data: Array<Folder>;
+    total: number;
+  };
+  collections?: {
+    data: CollectionSearchApiRecord[];
+    total: number;
+  };
+  sharedSpaces?: {
+    data: SharedSpaceSearchResult[];
     total: number;
   };
 };
@@ -65,19 +79,48 @@ function buildSearchPath(filters: SearchFilters): string {
   return queryString ? `/search?${queryString}` : "/search";
 }
 
-export const searchApi = {
-  async searchCollections(query: string): Promise<CollectionSearchResult[]> {
-    const response = await apiClient.get<
-      ApiSuccessEnvelope<CollectionSearchApiRecord[]>
-    >(`/search/collections?query=${encodeURIComponent(query)}`);
+function normalizeCollection(
+  item: CollectionSearchApiRecord,
+): CollectionSearchResult {
+  return {
+    id: item.id,
+    slug: item.slug,
+    name: item.name,
+    description: item.description ?? null,
+    documentCount: item.documentCount,
+  };
+}
 
-    return response.data.map((item) => ({
-      id: item.id,
-      slug: item.slug,
-      name: item.name,
-      description: item.description ?? null,
-      documentCount: item.documentCount,
-    }));
+function unwrapPaginatedCollections(
+  payload: CollectionSearchApiRecord[] | PaginatedApiPayload<CollectionSearchApiRecord>,
+): CollectionSearchResult[] {
+  if (Array.isArray(payload)) {
+    return payload.map(normalizeCollection);
+  }
+  return payload.data.map(normalizeCollection);
+}
+
+const emptySearchResult = (): SearchResult => ({
+  documents: { data: [], total: 0, page: 1 },
+  folders: { data: [], total: 0 },
+  collections: { data: [], total: 0 },
+  sharedSpaces: { data: [], total: 0 },
+});
+
+export const searchApi = {
+  async searchCollections(query: string, limit = 8): Promise<CollectionSearchResult[]> {
+    const params = new URLSearchParams({
+      query,
+      limit: String(limit),
+      page: "1",
+    });
+    const response = await apiClient.get<
+      ApiSuccessEnvelope<
+        CollectionSearchApiRecord[] | PaginatedApiPayload<CollectionSearchApiRecord>
+      >
+    >(`/search/collections?${params.toString()}`);
+
+    return unwrapPaginatedCollections(response.data);
   },
 
   async search(filters: SearchFilters): Promise<SearchResult> {
@@ -85,6 +128,32 @@ export const searchApi = {
       ApiSuccessEnvelope<SearchApiResponse>
     >(buildSearchPath(filters));
 
-    return response.data;
+    const data = response.data;
+
+    return {
+      documents: data.documents ?? { data: [], total: 0, page: 1 },
+      folders: data.folders ?? { data: [], total: 0 },
+      collections: {
+        data: (data.collections?.data ?? []).map(normalizeCollection),
+        total: data.collections?.total ?? 0,
+      },
+      sharedSpaces: {
+        data: data.sharedSpaces?.data ?? [],
+        total: data.sharedSpaces?.total ?? 0,
+      },
+    };
+  },
+
+  async globalQuickSearch(query: string, limit = 5): Promise<SearchResult> {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) {
+      return emptySearchResult();
+    }
+
+    return this.search({
+      query: trimmed,
+      page: 1,
+      limit,
+    });
   },
 };

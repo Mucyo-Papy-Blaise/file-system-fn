@@ -5,13 +5,17 @@ import type {
   LoginPayload,
   LogoutResponse,
   RegisterPayload,
+  UpdateOrganizationPayload,
+  UpdateProfilePayload,
 } from "@/types/auth";
 import type { ApiSuccessEnvelope } from "@/types/http";
 
-type MeResponse = ApiSuccessEnvelope<{
+type MeUserRecord = {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
+  profileImage?: string | null;
   role: string;
   organizationId: string;
   branchId?: string | null;
@@ -19,8 +23,11 @@ type MeResponse = ApiSuccessEnvelope<{
   organization?: {
     name?: string | null;
     logo?: string | null;
+    email?: string | null;
   } | null;
-}> | AuthUser | null;
+};
+
+type MeResponse = ApiSuccessEnvelope<MeUserRecord> | MeUserRecord | null;
 
 function unwrapAuthResponse(
   response: AuthSuccessResponse | ApiSuccessEnvelope<AuthSuccessResponse>,
@@ -37,6 +44,8 @@ function normalizeAuthUser(response: MeResponse): AuthUser | null {
     id: rawUser.id,
     name: rawUser.name,
     email: rawUser.email,
+    phone: rawUser.phone ?? null,
+    profileImage: rawUser.profileImage ?? null,
     role: rawUser.role as AuthUser["role"],
     branchId: rawUser.branchId ?? null,
     departmentId: rawUser.departmentId ?? null,
@@ -45,13 +54,22 @@ function normalizeAuthUser(response: MeResponse): AuthUser | null {
       "organization" in rawUser
         ? rawUser.organization?.name ?? null
         : "organizationName" in rawUser
-          ? rawUser.organizationName ?? null
+          ? ((rawUser as { organizationName?: string | null }).organizationName ??
+            null)
           : null,
     organizationLogo:
       "organization" in rawUser
         ? rawUser.organization?.logo ?? null
         : "organizationLogo" in rawUser
-          ? rawUser.organizationLogo ?? null
+          ? ((rawUser as { organizationLogo?: string | null }).organizationLogo ??
+            null)
+          : null,
+    organizationEmail:
+      "organization" in rawUser
+        ? rawUser.organization?.email ?? null
+        : "organizationEmail" in rawUser
+          ? (rawUser as { organizationEmail?: string | null }).organizationEmail ??
+            null
           : null,
   };
 }
@@ -90,5 +108,20 @@ export const authApi = {
     return apiClient.post<LogoutResponse>("/auth/logout", undefined, {
       withCredentials: true,
     });
+  },
+
+  async updateProfile(payload: UpdateProfilePayload): Promise<AuthUser | null> {
+    const response = await apiClient.patch<MeResponse>("/auth/profile", payload);
+    return normalizeAuthUser(response);
+  },
+
+  async updateOrganization(
+    payload: UpdateOrganizationPayload,
+  ): Promise<AuthUser | null> {
+    const response = await apiClient.patch<MeResponse>(
+      "/auth/organization",
+      payload,
+    );
+    return normalizeAuthUser(response);
   },
 };

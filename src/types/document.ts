@@ -113,12 +113,17 @@ export interface DocumentListResponse {
   pagination: DocumentPagination;
 }
 
+export interface BulkUploadFailure {
+  fileName: string;
+  reason: string;
+}
+
 export interface BulkUploadFile {
   file: File;
   fileName: string;
   preview: string;
   size: number;
-  status: "pending" | "uploading" | "done" | "error";
+  status: "pending" | "uploading" | "queued" | "done" | "error";
   error?: string;
 }
 

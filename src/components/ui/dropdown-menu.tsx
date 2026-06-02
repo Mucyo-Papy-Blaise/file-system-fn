@@ -192,7 +192,7 @@ export function DropdownMenuContent({
       }
     : {
         position: "fixed" as const,
-        top: anchorRect.bottom + 8,
+        top: anchorRect.bottom + 10,
       };
 
   const style =
@@ -214,7 +214,7 @@ export function DropdownMenuContent({
       role="menu"
       style={style}
       className={joinClassNames(
-        "z-[1000] min-w-48 overflow-hidden border border-default bg-surface",
+        "z-[1000] min-w-48 overflow-hidden rounded-xl border border-default bg-surface shadow-lg",
         className,
       )}
     >
@@ -248,7 +248,7 @@ export function DropdownMenuItem({
       onClick={handleClick}
       disabled={disabled}
       className={joinClassNames(
-        "w-full px-4 py-3 text-left text-sm transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60",
+        "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-60",
         className,
       )}
     >

@@ -16,6 +16,13 @@ export interface SearchDocumentHit {
   createdAt: string;
 }
 
+export interface SharedSpaceSearchResult {
+  id: string;
+  name: string;
+  description?: string | null;
+  documentCount: number;
+}
+
 export interface SearchResult {
   documents: {
     data: SearchDocumentHit[];
@@ -24,6 +31,14 @@ export interface SearchResult {
   };
   folders: {
     data: Folder[];
+    total: number;
+  };
+  collections: {
+    data: CollectionSearchResult[];
+    total: number;
+  };
+  sharedSpaces: {
+    data: SharedSpaceSearchResult[];
     total: number;
   };
 }

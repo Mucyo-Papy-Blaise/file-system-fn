@@ -12,6 +12,7 @@ const ROUTE_ROLE_ACCESS: Record<string, Role[]> = {
   "/dashboard/departments": [Role.OWNER, Role.BRANCH_MANAGER],
   "/dashboard/categories": [Role.OWNER, Role.BRANCH_MANAGER],
   "/dashboard/members": [Role.OWNER, Role.BRANCH_MANAGER, Role.DEPT_MANAGER],
+  "/dashboard/company": [Role.OWNER],
 };
 
 function getRequiredRoles(pathname: string): Role[] | null {

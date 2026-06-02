@@ -14,7 +14,8 @@ const pageTitles: Record<string, string> = {
   "/dashboard/search": "Search",
   "/dashboard/my-folders": "My Folders",
   "/dashboard/folders": "Folders",
-  "/dashboard/inbox": "Inbox",
+  "/dashboard/inbox": "Received",
+  "/dashboard/inbox/sent": "Sent",
   "/dashboard/trash": "Trash",
   "/dashboard/notifications": "Notifications",
   "/dashboard/unsorted": "Unsorted",
@@ -25,6 +26,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard/branches": "Branches",
   "/dashboard/departments": "Departments",
   "/dashboard/members": "Members",
+  "/dashboard/profile": "My Profile",
   "/dashboard/company": "Company Settings",
   "/dashboard/staff": "Staff",
 };

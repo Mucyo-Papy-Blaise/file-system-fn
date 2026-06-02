@@ -61,8 +61,11 @@ export function useUpdateDepartment() {
   const mutation = useMutation({
     mutationFn: ({ slug, data }: { slug: string; data: UpdateDepartmentInput }) =>
       departmentApi.updateDepartment(slug, data),
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({ queryKey: ["departments"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["departments", variables.slug],
+      });
     },
   });
 
@@ -98,8 +101,11 @@ export function useInviteDeptManager() {
   const mutation = useMutation({
     mutationFn: ({ slug, data }: { slug: string; data: InviteDeptManagerInput }) =>
       departmentApi.inviteDeptManager(slug, data),
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({ queryKey: ["departments"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["departments", variables.slug],
+      });
     },
   });
 

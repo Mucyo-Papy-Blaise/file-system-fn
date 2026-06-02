@@ -1,38 +1,71 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, UserPlus } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/lib/auth-context';
-import { useGetBranchBySlug, useInviteBranchManager } from '@/lib/hooks/useBranches';
-import { InviteBranchManagerModal } from '@/components/branches/InviteBranchManagerModal';
-import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { GitBranch, UserPlus } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/lib/auth-context";
+import { useGetBranchBySlug, useInviteBranchManager } from "@/lib/hooks/useBranches";
+import { InviteBranchManagerModal } from "@/components/branches/InviteBranchManagerModal";
+import { DepartmentLinkList } from "@/components/org/DepartmentLinkList";
+import { MembersTable } from "@/components/org/MembersTable";
+import { OrgDetailHeader, OrgDetailSection } from "@/components/org/OrgDetailHeader";
+import { OrgPagination } from "@/components/org/OrgPagination";
+import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
+import { Role } from "@/types/enum";
+import type { Member } from "@/types/member";
+
+const MEMBERS_PAGE_SIZE = 10;
 
 export default function BranchDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const branchSlug = typeof params.slug === 'string' ? params.slug : '';
+  const branchSlug = typeof params.slug === "string" ? params.slug : "";
   const { user, isLoading, isOwner } = useAuth();
   const { branch, isLoading: isBranchLoading } = useGetBranchBySlug(branchSlug);
   const { mutate: inviteManager, isLoading: isInviting } = useInviteBranchManager();
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [memberPage, setMemberPage] = useState(1);
 
   useEffect(() => {
     if (!isLoading && user && !isOwner) {
-      router.replace('/dashboard');
+      router.replace("/dashboard");
     }
   }, [isLoading, isOwner, router, user]);
 
-  if (isLoading || !user || !isOwner) {
-    return (
-      <div className="space-y-6">
-        <LoadingSkeleton width={200} height={32} />
-        <LoadingSkeleton height={200} rounded="1.5rem" />
-      </div>
-    );
-  }
+  const departments = branch?.departments ?? [];
+  const branchUsers = branch?.users ?? [];
+
+  const members: Member[] = useMemo(
+    () =>
+      branchUsers.map((u) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role as Member["role"],
+        createdAt: "",
+      })),
+    [branchUsers],
+  );
+
+  const memberCount = members.length || branch?.memberCount || 0;
+  const departmentCount = departments.length || branch?.departmentCount || 0;
+  const totalMemberPages = Math.max(1, Math.ceil(memberCount / MEMBERS_PAGE_SIZE));
+
+  const paginatedMembers = useMemo(() => {
+    const start = (memberPage - 1) * MEMBERS_PAGE_SIZE;
+    return members.slice(start, start + MEMBERS_PAGE_SIZE);
+  }, [members, memberPage]);
+
+  useEffect(() => {
+    if (memberPage > totalMemberPages) {
+      setMemberPage(totalMemberPages);
+    }
+  }, [memberPage, totalMemberPages]);
+
+  useEffect(() => {
+    setMemberPage(1);
+  }, [branchSlug, memberCount]);
 
   const handleInvite = (data: { email: string }) => {
     inviteManager(
@@ -40,86 +73,84 @@ export default function BranchDetailPage() {
       {
         onSuccess: () => toast.success(`Invitation sent to ${data.email}`),
         onError: (error) => {
-          toast.error(error instanceof Error ? error.message : 'Unable to send invitation.');
+          toast.error(
+            error instanceof Error ? error.message : "Unable to send invitation.",
+          );
         },
       },
     );
   };
 
-  const departments = branch?.departments ?? [];
-  const members = branch?.users ?? [];
+  if (isLoading || !user || !isOwner) {
+    return (
+      <div className="space-y-6 p-6">
+        <LoadingSkeleton width={200} height={32} />
+        <LoadingSkeleton height={200} rounded="1rem" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <Link
-        href="/dashboard/branches"
-        className="inline-flex items-center gap-2 text-sm font-medium text-secondary transition hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Branches
-      </Link>
+    <div className="space-y-5 p-6">
+      <OrgDetailHeader
+        backHref="/dashboard/branches"
+        backLabel="Back to Branches"
+        icon={GitBranch}
+        title={isBranchLoading ? "Loading…" : (branch?.name ?? "Branch")}
+        subtitle={
+          branch?.manager
+            ? `Branch manager: ${branch.manager.name}`
+            : "No branch manager assigned"
+        }
+        action={
+          <button
+            type="button"
+            onClick={() => setIsInviteOpen(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
+          >
+            <UserPlus className="h-4 w-4" />
+            Invite Manager
+          </button>
+        }
+        stats={
+          branch
+            ? [
+                { label: "Departments", value: departmentCount },
+                { label: "Members", value: memberCount },
+                { label: "Manager", value: branch.manager?.name ?? "—" },
+              ]
+            : undefined
+        }
+      />
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">
-            {isBranchLoading ? 'Loading...' : branch?.name ?? 'Branch'}
-          </h1>
-          <p className="mt-1 text-sm text-secondary">
-            Manager: {branch?.manager?.name ?? 'Not assigned'}
-          </p>
+      <OrgDetailSection title="Departments" count={departmentCount}>
+        <DepartmentLinkList
+          departments={departments}
+          isLoading={isBranchLoading}
+          emptyMessage="No departments in this branch yet."
+        />
+      </OrgDetailSection>
+
+      <OrgDetailSection title="Members" count={memberCount}>
+        <div className="overflow-hidden rounded-xl border border-default bg-surface">
+          <MembersTable
+            members={paginatedMembers}
+            isLoading={isBranchLoading}
+            emptyMessage="No members in this branch yet."
+            compact
+            embedded
+          />
+          <div className="px-4 pb-3">
+            <OrgPagination
+              page={memberPage}
+              pageSize={MEMBERS_PAGE_SIZE}
+              total={memberCount}
+              onPageChange={setMemberPage}
+              disabled={isBranchLoading}
+            />
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsInviteOpen(true)}
-          className="inline-flex items-center justify-center gap-2 rounded bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
-        >
-          <UserPlus className="h-4 w-4" />
-          Invite Branch Manager
-        </button>
-      </div>
-
-      {isBranchLoading ? (
-        <LoadingSkeleton height={240} rounded="1.5rem" />
-      ) : (
-        <>
-          <section className="rounded-3xl border border-default bg-surface p-6">
-            <h2 className="text-base font-semibold text-foreground">Departments</h2>
-            {departments.length === 0 ? (
-              <p className="mt-3 text-sm text-secondary">No departments in this branch yet.</p>
-            ) : (
-              <ul className="mt-4 space-y-2">
-                {departments.map((dept) => (
-                  <li
-                    key={dept.id}
-                    className="rounded-2xl border border-default px-4 py-3 text-sm text-foreground"
-                  >
-                    {dept.name}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="rounded-3xl border border-default bg-surface p-6">
-            <h2 className="text-base font-semibold text-foreground">Members</h2>
-            {members.length === 0 ? (
-              <p className="mt-3 text-sm text-secondary">No members in this branch yet.</p>
-            ) : (
-              <ul className="mt-4 space-y-2">
-                {members.map((member) => (
-                  <li
-                    key={member.id}
-                    className="flex items-center justify-between rounded-2xl border border-default px-4 py-3 text-sm"
-                  >
-                    <span className="font-medium text-foreground">{member.name}</span>
-                    <span className="text-secondary">{member.email}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </>
-      )}
+      </OrgDetailSection>
 
       <InviteBranchManagerModal
         isOpen={isInviteOpen}

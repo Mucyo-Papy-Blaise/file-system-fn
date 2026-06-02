@@ -1,12 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Trash2, RefreshCcw } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Trash2,
+  RefreshCcw,
+  Inbox,
+  Clock,
+  CheckCircle2,
+  Loader2,
+  FileStack,
+} from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { SortBar } from "@/components/ui/SortBar";
 import { DocumentDetails } from "@/components/documents/DocumentDetails";
 import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
+import { OrgPageHeader } from "@/components/org/OrgPageHeader";
+import {
+  OrgTableHead,
+  OrgTableShell,
+  OrgTableTh,
+} from "@/components/org/OrgTableShell";
 import { documentApi } from "@/api/document.api";
 import { useGetInbox, useDeleteDocument } from "@/lib/hooks/useDocuments";
 import {
@@ -17,8 +33,69 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { SortOption, Document } from "@/types/document";
 
+function StatCard({
+  label,
+  value,
+  tone,
+  icon,
+}: {
+  label: string;
+  value: number;
+  tone: "amber" | "sky" | "emerald";
+  icon: React.ReactNode;
+}) {
+  const tones = {
+    amber: "border-amber-200/80 bg-amber-50/80 text-amber-900",
+    sky: "border-sky-200/80 bg-sky-50/80 text-sky-900",
+    emerald: "border-emerald-200/80 bg-emerald-50/80 text-emerald-900",
+  };
+
+  return (
+    <div
+      className={`flex items-center gap-3 rounded border px-4 py-3.5 ${tones[tone]}`}
+    >
+      <div className="flex h-9 w-9 items-center justify-center rounded bg-white/70 shadow-sm">
+        {icon}
+      </div>
+      <div>
+        <p className="text-2xl font-semibold tabular-nums leading-none">{value}</p>
+        <p className="mt-1 text-xs font-medium opacity-80">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case "processing":
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Processing
+        </span>
+      );
+    case "ready":
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-2.5 py-1 text-xs font-medium text-sky-800">
+          <Clock className="h-3 w-3" />
+          Ready
+        </span>
+      );
+    case "confirmed":
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
+          <CheckCircle2 className="h-3 w-3" />
+          Confirmed
+        </span>
+      );
+    default:
+      return null;
+  }
+}
+
 export default function DashboardUnsortedPage() {
-  const { documents, isLoading } = useGetInbox();
+  const router = useRouter();
+  const { documents, isLoading, isFetching, refetch } = useGetInbox();
   const deleteDocument = useDeleteDocument();
   const queryClient = useQueryClient();
 
@@ -36,7 +113,6 @@ export default function DashboardUnsortedPage() {
     null,
   );
 
-  // Refs for checkboxes to handle indeterminate state
   const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
 
   const processingCount = documents.filter(
@@ -48,21 +124,35 @@ export default function DashboardUnsortedPage() {
   const confirmedCount = documents.filter(
     (d) => d.processingStatus === "confirmed",
   ).length;
+  const reviewedCount = readyCount + confirmedCount;
+  const reviewProgress =
+    documents.length > 0
+      ? Math.round((reviewedCount / documents.length) * 100)
+      : 0;
+  const analysisProgress =
+    documents.length > 0 && processingCount > 0
+      ? Math.round(
+          ((documents.length - processingCount) / documents.length) * 100,
+        )
+      : 0;
 
   const sortedDocuments = useMemo(() => {
     const items = [...documents];
     if (sortBy === "name_asc" || sortBy === "name_desc") {
       items.sort((left, right) => left.fileName.localeCompare(right.fileName));
       if (sortBy === "name_desc") items.reverse();
-      return items;
+    } else {
+      items.sort(
+        (left, right) =>
+          new Date(left.createdAt).getTime() -
+          new Date(right.createdAt).getTime(),
+      );
+      if (sortBy === "date_desc") items.reverse();
     }
-    items.sort(
-      (left, right) =>
-        new Date(left.createdAt).getTime() -
-        new Date(right.createdAt).getTime(),
-    );
-    if (sortBy === "date_desc") items.reverse();
-    return items;
+
+    const processing = items.filter((d) => d.processingStatus === "processing");
+    const rest = items.filter((d) => d.processingStatus !== "processing");
+    return [...processing, ...rest];
   }, [documents, sortBy]);
 
   const selectedDocument = documents.find((d) => d.id === selectedDocumentId);
@@ -70,7 +160,6 @@ export default function DashboardUnsortedPage() {
     documents.length > 0 && selectedIds.size === documents.length;
   const someSelected = selectedIds.size > 0 && !allSelected;
 
-  // Update indeterminate state on checkbox
   useEffect(() => {
     if (selectAllCheckboxRef.current) {
       selectAllCheckboxRef.current.indeterminate = someSelected;
@@ -124,8 +213,12 @@ export default function DashboardUnsortedPage() {
       }
     } else if (deleteMode === "multiple") {
       try {
+        const idsToDelete = Array.from(selectedIds);
         const trashItems = await Promise.all(
-          Array.from(selectedIds).map((id) => documentApi.deleteDocument(id)),
+          idsToDelete.map((id) => documentApi.deleteDocument(id)),
+        );
+        queryClient.setQueryData<Document[]>(["tray"], (current) =>
+          current?.filter((doc) => !idsToDelete.includes(doc.id)) ?? [],
         );
         await invalidateTrashRelatedQueries(queryClient);
         if (trashItems.length === 1) {
@@ -150,112 +243,162 @@ export default function DashboardUnsortedPage() {
     setDeleteModalOpen(true);
   };
 
+  const handleRefresh = async () => {
+    await refetch();
+  };
+
   const deleteConfirmationText =
     deleteMode === "multiple"
       ? `${selectedIds.size} documents`
       : documentToDelete?.fileName ?? "document";
 
-  function getProcessingStatusBadge(status: string) {
-    switch (status) {
-      case "processing":
-        return (
-          <span className="inline-block rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
-            Processing
-          </span>
-        );
-      case "ready":
-        return (
-          <span className="inline-block rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
-            Ready
-          </span>
-        );
-      case "confirmed":
-        return (
-          <span className="inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
-            Confirmed
-          </span>
-        );
-      default:
-        return null;
-    }
-  }
-
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Unsorted Documents
-          </h1>
-          <p className="mt-1 text-sm text-secondary">
-            Uncategorized files waiting to be organized.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="rounded bg-surface px-4 py-3 text-sm text-foreground shadow-sm flex items-center gap-5">
-            <p className="text-xs uppercase tracking-[0.18em] text-secondary">
-              Total
-            </p>
-            <p className="font-semibold text-foreground">{documents.length}</p>
+    <div className="space-y-8 p-6 lg:p-8">
+      <OrgPageHeader
+        title="Tray"
+        description="Uncategorized documents waiting for review. Bulk uploads show here immediately; OCR and AI run one file at a time."
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 rounded-xl border border-default bg-surface px-4 py-2.5 shadow-sm">
+              <FileStack className="h-4 w-4 text-secondary" />
+              <span className="text-xs font-medium uppercase tracking-wider text-secondary">
+                Total
+              </span>
+              <span className="text-lg font-semibold tabular-nums text-foreground">
+                {isLoading ? "—" : documents.length}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleRefresh()}
+              disabled={isFetching}
+              className="inline-flex items-center gap-2 rounded-xl border border-default bg-surface px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition hover:bg-[var(--color-bg-secondary)] disabled:opacity-60"
+            >
+              <RefreshCcw
+                className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 rounded border border-default bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)]"
-          >
-            <RefreshCcw className="h-4 w-4" />
-            Refresh
-          </button>
+        }
+      />
+
+      {processingCount > 0 && (
+        <div className="flex flex-col gap-3 rounded-xl border border-amber-200/80 bg-gradient-to-r from-amber-50/90 to-amber-50/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100">
+              <Loader2 className="h-5 w-5 animate-spin text-amber-700" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-amber-950">
+                Analyzing {processingCount} document
+                {processingCount === 1 ? "" : "s"}…
+              </p>
+              <p className="mt-0.5 text-xs text-amber-800/90">
+                OCR and AI run sequentially — one file at a time. This page
+                updates automatically.
+              </p>
+            </div>
+          </div>
+          <div className="min-w-[140px] sm:max-w-xs sm:flex-1">
+            <div className="flex items-center justify-between text-xs font-medium text-amber-900">
+              <span>Analysis progress</span>
+              <span className="tabular-nums">{analysisProgress}%</span>
+            </div>
+            <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-amber-200/60">
+              <div
+                className="h-full rounded-full bg-amber-600 transition-all duration-500"
+                style={{ width: `${analysisProgress}%` }}
+              />
+            </div>
+          </div>
         </div>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard
+          label="Processing"
+          value={processingCount}
+          tone="amber"
+          icon={<Loader2 className="h-4 w-4 animate-spin text-amber-700" />}
+        />
+        <StatCard
+          label="Ready for review"
+          value={readyCount}
+          tone="sky"
+          icon={<Inbox className="h-4 w-4 text-sky-700" />}
+        />
+        <StatCard
+          label="Confirmed"
+          value={confirmedCount}
+          tone="emerald"
+          icon={<CheckCircle2 className="h-4 w-4 text-emerald-700" />}
+        />
       </div>
 
-      <SortBar sortBy={sortBy} onChange={setSortBy} />
-
-      <div className="flex gap-3 flex-wrap">
-        <div className="rounded px-4 py-2 bg-yellow-100 text-yellow-800 text-sm font-medium">
-          {processingCount} processing
-        </div>
-        <div className="rounded px-4 py-2 bg-blue-100 text-blue-800 text-sm font-medium">
-          {readyCount} ready for review
-        </div>
-        <div className="rounded px-4 py-2 bg-green-100 text-green-800 text-sm font-medium">
-          {confirmedCount} confirmed
-        </div>
-      </div>
-
-      {documents.length > 0 && (
-        <div className="mt-2">
-          <div className="h-2 w-full rounded-full bg-[var(--color-bg-tertiary)]">
+      {documents.length > 0 && processingCount === 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-secondary">
+            <span>Review progress</span>
+            <span className="font-medium tabular-nums text-foreground">
+              {reviewProgress}%
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-[var(--color-bg-tertiary)]">
             <div
-              className="h-2 rounded-full bg-primary"
-              style={{
-                width: `${Math.round(((readyCount + confirmedCount) / documents.length) * 100)}%`,
-              }}
+              className="h-full rounded-full bg-primary transition-all duration-500"
+              style={{ width: `${reviewProgress}%` }}
             />
           </div>
         </div>
       )}
 
+      <SortBar sortBy={sortBy} onChange={setSortBy} />
+
       {isLoading ? (
-        <div className="space-y-4">
-          {[...Array(5)].map((_, index) => (
-            <div key={index}>
-              <LoadingSkeleton height={60} rounded="0.5rem" />
-            </div>
-          ))}
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <LoadingSkeleton key={i} height={72} rounded="0.75rem" />
+            ))}
+          </div>
+          <OrgTableShell>
+            <table className="w-full min-w-[720px]">
+              <OrgTableHead>
+                <OrgTableTh>
+                  <LoadingSkeleton height={14} width={40} />
+                </OrgTableTh>
+                <OrgTableTh>File</OrgTableTh>
+                <OrgTableTh>Status</OrgTableTh>
+                <OrgTableTh>Category</OrgTableTh>
+                <OrgTableTh>Updated</OrgTableTh>
+                <OrgTableTh align="right">Actions</OrgTableTh>
+              </OrgTableHead>
+              <tbody>
+                {[...Array(6)].map((_, index) => (
+                  <tr key={index} className="border-b border-default">
+                    <td colSpan={6} className="px-5 py-4">
+                      <LoadingSkeleton height={20} rounded="0.375rem" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </OrgTableShell>
         </div>
       ) : documents.length === 0 ? (
-        <EmptyState
-          title="No unsorted documents"
-          description="All your documents are organized!"
-          actionLabel="View all documents"
-          onAction={() => window.location.assign("/dashboard/documents")}
-        />
+        <div className="rounded-2xl border border-dashed border-default bg-[var(--color-bg-secondary)]/50 py-16">
+          <EmptyState
+            title="Tray is empty"
+            description="Bulk uploads land here after AI analysis. Organize documents into folders and categories when you review them."
+            actionLabel="Browse all documents"
+            onAction={() => router.push("/dashboard/documents")}
+          />
+        </div>
       ) : (
         <>
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-4 rounded-lg bg-primary/10 border border-primary/20 p-4">
+            <div className="flex items-center gap-4 rounded border border-primary/20 bg-primary/5 px-4 py-3">
               <span className="text-sm font-medium text-foreground">
                 {selectedIds.size} selected
               </span>
@@ -263,94 +406,128 @@ export default function DashboardUnsortedPage() {
                 type="button"
                 onClick={handleDeleteAll}
                 disabled={deleteDocument.isLoading}
-                className="ml-auto inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                className="ml-auto inline-flex items-center gap-2 rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
               >
                 <Trash2 className="h-4 w-4" />
-                Delete Selected
+                Delete selected
               </button>
             </div>
           )}
 
-          <div className="rounded-lg border border-default bg-surface overflow-hidden">
-            {/* Header */}
-            <div className="grid items-center gap-4 border-b border-default px-4 py-4 text-sm font-semibold text-secondary bg-[var(--color-bg-secondary)] md:grid-cols-[40px_minmax(280px,1.5fr)_120px_120px_140px_120px]">
-              <div className="flex items-center">
-                <input
-                  ref={selectAllCheckboxRef}
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={handleToggleAll}
-                  className="rounded border-default"
-                />
-              </div>
-              <div>File Name</div>
-              <div>Status</div>
-              <div>Category</div>
-              <div>Updated</div>
-              <div className="text-right">Actions</div>
-            </div>
+          <OrgTableShell>
+            <table className="w-full min-w-[720px]">
+              <OrgTableHead>
+                <OrgTableTh>
+                  <input
+                    ref={selectAllCheckboxRef}
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={handleToggleAll}
+                    className="rounded border-default"
+                    aria-label="Select all"
+                  />
+                </OrgTableTh>
+                <OrgTableTh>Document</OrgTableTh>
+                <OrgTableTh>Status</OrgTableTh>
+                <OrgTableTh>Category</OrgTableTh>
+                <OrgTableTh>Updated</OrgTableTh>
+                <OrgTableTh align="right">Actions</OrgTableTh>
+              </OrgTableHead>
+              <tbody>
+                {sortedDocuments.map((document) => {
+                  const isSelected = selectedIds.has(document.id);
+                  const formattedDate = new Date(
+                    document.updatedAt || document.createdAt,
+                  ).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  });
 
-            {/* Rows */}
-            {sortedDocuments.map((document) => {
-              const isSelected = selectedIds.has(document.id);
-              const formattedDate = new Date(
-                document.updatedAt || document.createdAt,
-              ).toLocaleDateString(undefined, {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              });
+                  return (
+                    <tr
+                      key={document.id}
+                      className="border-b border-default text-sm text-foreground transition last:border-b-0 hover:bg-[var(--color-bg-secondary)]/60"
+                    >
+                      <td className="px-5 py-4">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(document.id)}
+                          className="rounded border-default"
+                          aria-label={`Select ${document.fileName}`}
+                        />
+                      </td>
+                      <td className="max-w-xs px-5 py-4">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDetails(document)}
+                          disabled={document.processingStatus === "processing"}
+                          className="block max-w-full truncate text-left font-medium text-foreground hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {document.title || document.fileName}
+                        </button>
+                        {document.processingStatus === "processing" ? (
+                          <p className="mt-0.5 text-xs text-amber-700">
+                            OCR & AI in queue…
+                          </p>
+                        ) : (
+                          document.title &&
+                          document.fileName !== document.title && (
+                            <p className="mt-0.5 truncate text-xs text-secondary">
+                              {document.fileName}
+                            </p>
+                          )
+                        )}
+                      </td>
+                      <td className="px-5 py-4">
+                        <StatusBadge status={document.processingStatus} />
+                      </td>
+                      <td className="px-5 py-4 text-secondary">
+                        {document.category?.name ?? "—"}
+                      </td>
+                      <td className="px-5 py-4 text-secondary tabular-nums">
+                        {formattedDate}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDetails(document)}
+                            disabled={document.processingStatus === "processing"}
+                            className="rounded bg-[var(--color-bg-tertiary)] px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {document.processingStatus === "processing"
+                              ? "Analyzing"
+                              : "Review"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSingle(document)}
+                            disabled={deleteDocument.isLoading}
+                            className="rounded p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                            aria-label="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </OrgTableShell>
 
-              return (
-                <div
-                  key={document.id}
-                  className="grid items-center gap-4 border-b border-default px-4 py-4 text-sm text-foreground hover:bg-[var(--color-bg-secondary)] transition md:grid-cols-[40px_minmax(280px,1.5fr)_120px_120px_140px_120px]"
-                >
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => handleToggleSelect(document.id)}
-                      className="rounded border-default"
-                    />
-                  </div>
-                  <div className="truncate">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenDetails(document)}
-                      className="text-left font-semibold text-foreground hover:text-primary transition truncate"
-                    >
-                      {document.title || document.fileName}
-                    </button>
-                  </div>
-                  <div>
-                    {getProcessingStatusBadge(document.processingStatus)}
-                  </div>
-                  <div className="truncate text-secondary">
-                    {document.category?.name ?? "—"}
-                  </div>
-                  <div className="text-secondary">{formattedDate}</div>
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenDetails(document)}
-                      className="inline-flex items-center gap-1 rounded px-3 py-2 text-xs font-semibold text-foreground bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-secondary)] transition"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSingle(document)}
-                      disabled={deleteDocument.isLoading}
-                      className="inline-flex items-center gap-1 rounded px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <p className="text-center text-xs text-secondary">
+            Need everything filed?{" "}
+            <Link
+              href="/dashboard/documents"
+              className="font-medium text-primary hover:underline"
+            >
+              View all documents
+            </Link>
+          </p>
         </>
       )}
 

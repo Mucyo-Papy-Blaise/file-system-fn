@@ -1,25 +1,31 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/lib/auth-context';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/lib/auth-context";
 import {
   useCreateBranch,
   useDeleteBranch,
   useGetBranches,
   useInviteBranchManager,
   useUpdateBranch,
-} from '@/lib/hooks/useBranches';
-import { BranchCard } from '@/components/branches/BranchCard';
-import { CreateBranchModal } from '@/components/branches/CreateBranchModal';
-import { EditBranchModal } from '@/components/branches/EditBranchModal';
-import { InviteBranchManagerModal } from '@/components/branches/InviteBranchManagerModal';
-import { DeleteConfirmationModal } from '@/components/ui/DeleteConfirmationModal';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
-import type { Branch } from '@/types/branch';
+} from "@/lib/hooks/useBranches";
+import { BranchRow } from "@/components/branches/BranchRow";
+import { CreateBranchModal } from "@/components/branches/CreateBranchModal";
+import { EditBranchModal } from "@/components/branches/EditBranchModal";
+import { InviteBranchManagerModal } from "@/components/branches/InviteBranchManagerModal";
+import { OrgPageHeader } from "@/components/org/OrgPageHeader";
+import {
+  OrgTableHead,
+  OrgTableShell,
+  OrgTableTh,
+} from "@/components/org/OrgTableShell";
+import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
+import type { Branch } from "@/types/branch";
 
 export default function DashboardBranchesPage() {
   const router = useRouter();
@@ -36,163 +42,214 @@ export default function DashboardBranchesPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
 
+  const isBusy = isCreating || isUpdating || isDeleting || isInviting;
+
   useEffect(() => {
     if (!isLoading && user && !isOwner) {
-      router.replace('/dashboard');
+      router.replace("/dashboard");
     }
   }, [isLoading, isOwner, router, user]);
 
   if (isLoading || !user || !isOwner) {
     return (
-      <div className="space-y-6">
-        <LoadingSkeleton width={200} height={32} />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, index) => (
-            <LoadingSkeleton key={index} height={160} rounded="1.5rem" />
-          ))}
-        </div>
+      <div className="space-y-6 p-6">
+        <LoadingSkeleton width={280} height={32} />
+        <LoadingSkeleton height={280} rounded="1rem" />
       </div>
     );
   }
 
-  const handleCreate = (name: string) => {
-    createBranch(
-      { name },
-      {
-        onSuccess: () => toast.success('Branch created successfully'),
-        onError: (error) => {
-          toast.error(error instanceof Error ? error.message : 'Unable to create branch.');
-        },
-      },
-    );
-  };
+  const newBranchButton = (
+    <button
+      type="button"
+      onClick={() => setIsCreateOpen(true)}
+      className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
+    >
+      <Plus className="h-4 w-4" />
+      New Branch
+    </button>
+  );
 
-  const handleUpdate = (name: string) => {
-    if (!selectedBranch) return;
-    updateBranch(
-      { slug: selectedBranch.slug, data: { name } },
-      {
-        onSuccess: () => toast.success('Branch updated successfully'),
-        onError: (error) => {
-          toast.error(error instanceof Error ? error.message : 'Unable to update branch.');
-        },
-      },
-    );
-  };
-
-  const handleDelete = () => {
-    if (!selectedBranch) return;
-    deleteBranch(selectedBranch.slug, {
-      onSuccess: () => toast.success('Branch deleted successfully'),
-      onError: (error) => {
-        toast.error(error instanceof Error ? error.message : 'Unable to delete branch.');
-      },
-    });
-    setIsDeleteOpen(false);
-  };
-
-  const handleInvite = (data: { email: string }) => {
-    if (!selectedBranch) return;
-    inviteManager(
-      { slug: selectedBranch.slug, data },
-      {
-        onSuccess: () => toast.success(`Invitation sent to ${data.email}`),
-        onError: (error) => {
-          toast.error(error instanceof Error ? error.message : 'Unable to send invitation.');
-        },
-      },
-    );
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Branches</h1>
-          <p className="mt-1 max-w-2xl text-sm text-secondary">
-            Organize your organization into branches and assign branch managers.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setIsCreateOpen(true)}
-          className="inline-flex items-center justify-center gap-2 rounded bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
-        >
-          <Plus className="h-4 w-4" />
-          New Branch
-        </button>
-      </div>
-
-      {isError ? (
+  if (isError) {
+    return (
+      <div className="space-y-6 p-6">
+        <OrgPageHeader
+          title="Branches"
+          description="Organize your organization into branches and assign branch managers."
+        />
         <EmptyState
           title="Unable to load branches"
           description="There was a problem fetching branches. Refresh to try again."
           actionLabel="Retry"
           onAction={() => router.refresh()}
         />
-      ) : isBranchesLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, index) => (
-            <LoadingSkeleton key={index} height={160} rounded="1.5rem" />
-          ))}
-        </div>
-      ) : branches.length === 0 ? (
+      </div>
+    );
+  }
+
+  if (!isBranchesLoading && branches.length === 0) {
+    return (
+      <div className="space-y-6 p-6">
+        <OrgPageHeader
+          title="Branches"
+          description="Organize your organization into branches and assign branch managers."
+          action={newBranchButton}
+        />
         <EmptyState
           title="No branches yet"
-          description="Create one to organize your organization."
+          description="Create your first branch to structure departments and members."
           actionLabel="New Branch"
           onAction={() => setIsCreateOpen(true)}
         />
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {branches.map((branch) => (
-            <BranchCard
-              key={branch.id}
-              branch={branch}
-              currentUser={user}
-              onEdit={() => {
-                setSelectedBranch(branch);
-                setIsEditOpen(true);
-              }}
-              onInviteManager={() => {
-                setSelectedBranch(branch);
-                setIsInviteOpen(true);
-              }}
-              onDelete={() => {
-                setSelectedBranch(branch);
-                setIsDeleteOpen(true);
-              }}
-            />
-          ))}
-        </div>
-      )}
+        <CreateBranchModal
+          isOpen={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
+          onConfirm={(name) => {
+            createBranch(
+              { name },
+              {
+                onSuccess: () => toast.success("Branch created successfully"),
+                onError: (error) => {
+                  toast.error(
+                    error instanceof Error ? error.message : "Unable to create branch.",
+                  );
+                },
+              },
+            );
+          }}
+          isSubmitting={isCreating}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 p-6">
+      <OrgPageHeader
+        title="Branches"
+        description="Organize your organization into branches and assign branch managers."
+        action={newBranchButton}
+      />
+
+      <OrgTableShell>
+        <table className="w-full min-w-[720px] text-sm">
+          <OrgTableHead>
+            <OrgTableTh>Name</OrgTableTh>
+            <OrgTableTh>Departments</OrgTableTh>
+            <OrgTableTh>Members</OrgTableTh>
+            <OrgTableTh>Manager</OrgTableTh>
+            <OrgTableTh>Created</OrgTableTh>
+            <OrgTableTh align="right">Actions</OrgTableTh>
+          </OrgTableHead>
+          <tbody>
+            {isBranchesLoading
+              ? [...Array(4)].map((_, index) => (
+                  <tr key={index} className="border-t border-default">
+                    <td colSpan={6} className="px-5 py-4">
+                      <LoadingSkeleton height={40} rounded="0.5rem" />
+                    </td>
+                  </tr>
+                ))
+              : branches.map((branch) => (
+                  <BranchRow
+                    key={branch.id}
+                    branch={branch}
+                    onEdit={() => {
+                      setSelectedBranch(branch);
+                      setIsEditOpen(true);
+                    }}
+                    onInviteManager={() => {
+                      setSelectedBranch(branch);
+                      setIsInviteOpen(true);
+                    }}
+                    onDelete={() => {
+                      setSelectedBranch(branch);
+                      setIsDeleteOpen(true);
+                    }}
+                    isBusy={isBusy}
+                  />
+                ))}
+          </tbody>
+        </table>
+      </OrgTableShell>
 
       <CreateBranchModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onConfirm={handleCreate}
+        onConfirm={(name) => {
+          createBranch(
+            { name },
+            {
+              onSuccess: () => toast.success("Branch created successfully"),
+              onError: (error) => {
+                toast.error(
+                  error instanceof Error ? error.message : "Unable to create branch.",
+                );
+              },
+            },
+          );
+        }}
         isSubmitting={isCreating}
       />
       <EditBranchModal
         isOpen={isEditOpen}
-        branchName={selectedBranch?.name ?? ''}
+        branchName={selectedBranch?.name ?? ""}
         onClose={() => setIsEditOpen(false)}
-        onConfirm={handleUpdate}
+        onConfirm={(name) => {
+          if (!selectedBranch) return;
+          updateBranch(
+            { slug: selectedBranch.slug, data: { name } },
+            {
+              onSuccess: () => toast.success("Branch updated successfully"),
+              onError: (error) => {
+                toast.error(
+                  error instanceof Error ? error.message : "Unable to update branch.",
+                );
+              },
+            },
+          );
+        }}
         isSubmitting={isUpdating}
       />
       <InviteBranchManagerModal
         isOpen={isInviteOpen}
         onClose={() => setIsInviteOpen(false)}
-        onConfirm={handleInvite}
+        onConfirm={(data) => {
+          if (!selectedBranch) return;
+          inviteManager(
+            { slug: selectedBranch.slug, data },
+            {
+              onSuccess: () => toast.success(`Invitation sent to ${data.email}`),
+              onError: (error) => {
+                toast.error(
+                  error instanceof Error ? error.message : "Unable to send invitation.",
+                );
+              },
+            },
+          );
+        }}
         isSubmitting={isInviting}
       />
       <DeleteConfirmationModal
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
-        onConfirm={handleDelete}
+        onConfirm={() => {
+          if (!selectedBranch) return;
+          deleteBranch(selectedBranch.slug, {
+            onSuccess: () => {
+              toast.success("Branch deleted successfully");
+              setIsDeleteOpen(false);
+            },
+            onError: (error) => {
+              toast.error(
+                error instanceof Error ? error.message : "Unable to delete branch.",
+              );
+            },
+          });
+        }}
         title="Delete Branch"
         description="Deleting a branch removes it from your organization. Departments must be removed first."
-        itemNameToConfirm={selectedBranch?.name ?? ''}
+        itemNameToConfirm={selectedBranch?.name ?? ""}
         isLoading={isDeleting}
       />
     </div>

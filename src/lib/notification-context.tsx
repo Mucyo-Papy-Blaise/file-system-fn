@@ -190,16 +190,37 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       void queryClient.invalidateQueries({ queryKey: ["tray"] });
     };
 
+    const handleTrayUpdated = () => {
+      void queryClient.invalidateQueries({ queryKey: ["tray"] });
+    };
+
+    const handleTrayProcessing = (payload: unknown) => {
+      const count =
+        payload && typeof payload === "object" && "count" in payload
+          ? Number((payload as { count?: number }).count)
+          : 0;
+      if (count > 0) {
+        toast.info(
+          `${count} document${count === 1 ? "" : "s"} queued — track progress in Tray`,
+        );
+      }
+      void queryClient.invalidateQueries({ queryKey: ["tray"] });
+    };
+
     on("notification:new", handleNotificationNew);
     on("share:new", handleShareNew);
     on("share:reply", handleShareReply);
     on("inbox:ready", handleInboxReady);
+    on("tray:updated", handleTrayUpdated);
+    on("tray:processing", handleTrayProcessing);
 
     return () => {
       off("notification:new", handleNotificationNew);
       off("share:new", handleShareNew);
       off("share:reply", handleShareReply);
       off("inbox:ready", handleInboxReady);
+      off("tray:updated", handleTrayUpdated);
+      off("tray:processing", handleTrayProcessing);
     };
   }, [
     isAuthenticated,

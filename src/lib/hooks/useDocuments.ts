@@ -125,7 +125,11 @@ export function useDeleteDocument() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (id: string) => documentApi.deleteDocument(id),
-    onSuccess: async (trashItem) => {
+    onSuccess: async (trashItem, deletedDocumentId) => {
+      const removedId = trashItem.documentId ?? deletedDocumentId;
+      queryClient.setQueryData<Document[]>(["tray"], (current) =>
+        current?.filter((doc) => doc.id !== removedId) ?? [],
+      );
       await invalidateTrashRelatedQueries(queryClient);
       showMovedToTrashToast(trashItem.id, queryClient);
     },
@@ -212,8 +216,9 @@ export function useGetInbox() {
     queryFn: () => documentApi.getInbox(),
     refetchInterval: (query) => {
       const data = query.state.data;
-      return Array.isArray(data) && data.some((d) => d.processingStatus === "processing")
-        ? 5000
+      return Array.isArray(data) &&
+        data.some((d) => d.processingStatus === "processing")
+        ? 2500
         : false;
     },
   });
@@ -238,6 +243,8 @@ export function useGetInbox() {
   return {
     documents: query.data ?? [],
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     isError: query.isError,
+    refetch: query.refetch,
   };
 }

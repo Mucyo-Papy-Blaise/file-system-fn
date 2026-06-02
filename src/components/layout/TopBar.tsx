@@ -1,15 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { ChevronDown, LibraryBig, Menu, Search } from "lucide-react";
-import { NotificationBell } from "@/components/notifications/NotificationBell";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Building2, ChevronDown, LogOut, Menu, User } from "lucide-react";
 import { toast } from "sonner";
-import { useDebounce } from "use-debounce";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { GlobalSearch } from "@/components/layout/GlobalSearch";
 import { useAuth } from "@/lib/auth-context";
-import { useSearchCollections } from "@/lib/hooks/useSearch";
-import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,15 +30,41 @@ function getInitials(name?: string | null) {
     .join("");
 }
 
-export function TopBar({ pageTitle, onMenuClick, onUploadClick }: TopBarProps) {
-  const [query, setQuery] = useState("");
-  const [debouncedQuery] = useDebounce(query, 300);
-  const isSearchDropdownOpen = debouncedQuery.length >= 2;
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const router = useRouter();
+function AccountAvatar({
+  name,
+  profileImage,
+  size = "sm",
+}: {
+  name?: string | null;
+  profileImage?: string | null;
+  size?: "sm" | "md";
+}) {
+  const dim = size === "md" ? "h-10 w-10 text-sm" : "h-8 w-8 text-xs";
 
-  const { user, logout } = useAuth();
-  const { collections, isLoading } = useSearchCollections(debouncedQuery);
+  return (
+    <span
+      className={`relative inline-flex shrink-0 overflow-hidden rounded-full bg-primary-subtle font-semibold text-primary ${dim}`}
+    >
+      {profileImage ? (
+        <Image
+          src={profileImage}
+          alt={name ?? "Profile"}
+          fill
+          className="object-cover"
+          unoptimized
+        />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center">
+          {getInitials(name)}
+        </span>
+      )}
+    </span>
+  );
+}
+
+export function TopBar({ pageTitle, onMenuClick }: TopBarProps) {
+  const router = useRouter();
+  const { user, logout, isOwner } = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -54,139 +77,100 @@ export function TopBar({ pageTitle, onMenuClick, onUploadClick }: TopBarProps) {
     }
   };
 
-  useEffect(() => {
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (!wrapperRef.current) return;
-      if (!wrapperRef.current.contains(event.target as Node)) {
-        setQuery("");
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setQuery("");
-      }
-    };
-
-    document.addEventListener("mousedown", handleOutsideClick);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-
   return (
-    <header className="flex h-16 items-center justify-between border-b border-default bg-surface px-4 sm:px-6">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-default bg-surface/95 px-3 backdrop-blur-sm sm:gap-4 sm:px-5 lg:px-6">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           type="button"
           onClick={onMenuClick}
-          className="rounded-xl p-2 text-secondary transition hover:bg-[var(--color-bg-secondary)] hover:text-foreground lg:hidden"
+          className="rounded-lg p-2 text-secondary transition hover:bg-[var(--color-bg-secondary)] hover:text-foreground lg:hidden"
           aria-label="Open sidebar"
         >
           <Menu className="h-5 w-5" />
         </button>
 
-        <h1 className="text-lg font-semibold text-foreground sm:text-xl">
+        <h1 className="hidden truncate text-sm font-semibold text-foreground md:block lg:max-w-[180px] lg:text-base">
           {pageTitle}
         </h1>
       </div>
 
-      <div className="relative flex-1 px-4 sm:px-6">
-        <div ref={wrapperRef} className="relative mx-auto max-w-lg">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" />
-          <input
-            type="text"
-            placeholder="Search collections..."
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="w-full rounded-3xl border border-default bg-[var(--color-bg-secondary)] py-2 pl-11 pr-4 text-sm text-foreground placeholder-secondary focus:border-primary focus:outline-none"
-            aria-label="Search collections"
-          />
-
-          {isSearchDropdownOpen && (
-            <div className="absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-3xl border border-default bg-surface shadow-lg">
-              {isLoading ? (
-                <div className="space-y-2 p-4">
-                  {[...Array(3)].map((_, index) => (
-                    <LoadingSkeleton key={index} height={52} rounded="1rem" />
-                  ))}
-                </div>
-              ) : collections.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-secondary">
-                  No collections found
-                </div>
-              ) : (
-                <div className="divide-y divide-default">
-                  {collections.slice(0, 5).map((collection) => (
-                    <Link
-                      key={collection.id}
-                      href={`/dashboard/collections/${collection.slug}`}
-                      className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--color-bg-secondary)]"
-                      onClick={() => setQuery("")}
-                    >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-3xl bg-[var(--color-bg-secondary)] text-secondary">
-                        <LibraryBig className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-foreground">
-                          {collection.name}
-                        </p>
-                        <p className="truncate text-xs text-secondary">
-                          {collection.description ?? "No description"}
-                        </p>
-                      </div>
-                      <span className="rounded-full bg-[var(--color-bg-secondary)] px-3 py-1 text-xs font-semibold text-secondary">
-                        {collection.documentCount} docs
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+      <div className="flex min-w-0 flex-1 justify-center px-0 sm:px-2">
+        <div className="w-full max-w-xl">
+          <GlobalSearch />
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         <NotificationBell />
 
         <DropdownMenu>
-          <DropdownMenuTrigger
-            asChild
-            ariaLabel="Account menu"
-            className="rounded-3xl border border-default bg-[var(--color-bg-secondary)] px-3 py-2 text-sm font-medium text-foreground transition hover:bg-[var(--color-bg-tertiary)]"
-          >
-            <button type="button" className="flex items-center gap-2">
-              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-subtle)] text-sm font-semibold text-primary">
-                {getInitials(user?.name)}
-              </span>
-              <span className="hidden min-w-0 truncate sm:inline">
+          <DropdownMenuTrigger asChild ariaLabel="Account menu">
+            <button
+              type="button"
+              className="group flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition hover:bg-[var(--color-bg-secondary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 aria-expanded:bg-[var(--color-bg-secondary)] sm:pr-2.5 [&[aria-expanded=true]_svg:last-child]:rotate-180"
+            >
+              <AccountAvatar
+                name={user?.name}
+                profileImage={user?.profileImage}
+              />
+              <span className="hidden max-w-[7.5rem] truncate text-sm font-medium text-foreground lg:inline">
                 {user?.name ?? "Account"}
               </span>
-              <ChevronDown className="h-4 w-4 text-secondary" />
+              <ChevronDown className="hidden h-4 w-4 shrink-0 text-muted transition-transform duration-200 sm:block" />
             </button>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="end" className="min-w-[220px]">
-            <div className="space-y-2 px-4 py-4">
-              <p className="truncate text-sm font-semibold text-foreground">
-                {user?.name ?? "Guest User"}
-              </p>
-              <p className="truncate text-xs text-secondary">{user?.email ?? "No email"}</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-[var(--color-primary-subtle)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
-                  {user?.role ?? "Guest"}
-                </span>
-                <span className="truncate text-xs text-secondary">
-                  {user?.organizationName ?? "No organization"}
-                </span>
+          <DropdownMenuContent align="end" width={272} className="p-1.5">
+            <div className="flex items-center gap-3 rounded-lg px-2.5 py-2.5">
+              <AccountAvatar
+                name={user?.name}
+                profileImage={user?.profileImage}
+                size="md"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {user?.name ?? "Guest User"}
+                </p>
+                <p className="truncate text-xs text-muted">
+                  {user?.email ?? "No email"}
+                </p>
+                {user?.organizationName ? (
+                  <p className="mt-0.5 truncate text-xs text-secondary">
+                    {user.organizationName}
+                  </p>
+                ) : null}
               </div>
             </div>
-            <div className="border-t border-default" />
-            <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+
+            {user?.role ? (
+              <div className="px-2.5 pb-2">
+                <span className="inline-flex rounded-md bg-primary-subtle px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                  {user.role.replace(/_/g, " ")}
+                </span>
+              </div>
+            ) : null}
+
+            <div className="my-1 border-t border-default" />
+
+            <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>
+              <User className="h-4 w-4 shrink-0 text-muted" />
+              My Profile
+            </DropdownMenuItem>
+
+            {isOwner ? (
+              <DropdownMenuItem onClick={() => router.push("/dashboard/company")}>
+                <Building2 className="h-4 w-4 shrink-0 text-muted" />
+                Company Settings
+              </DropdownMenuItem>
+            ) : null}
+
+            <div className="my-1 border-t border-default" />
+
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
               Logout
             </DropdownMenuItem>
           </DropdownMenuContent>

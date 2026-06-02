@@ -1,34 +1,36 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ImageUploadField } from "@/components/profile/ImageUploadField";
 import { OrgPageHeader } from "@/components/org/OrgPageHeader";
 import { UnderlineField } from "@/components/auth/Underlinefield";
 import { useAuth } from "@/lib/auth-context";
-import { useUpdateOrganization } from "@/lib/hooks/useProfile";
-import { Role } from "@/types/enum";
+import { useUpdateProfile } from "@/lib/hooks/useProfile";
 
-export default function DashboardCompanyPage() {
-  const router = useRouter();
-  const { user, refreshUser, isLoading: isAuthLoading, isOwner } = useAuth();
-  const { mutate: updateOrganization, isLoading: isSaving } =
-    useUpdateOrganization();
+function getInitials(name?: string | null) {
+  if (!name) return "U";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+export default function DashboardProfilePage() {
+  const { user, refreshUser, isLoading: isAuthLoading } = useAuth();
+  const { mutate: updateProfile, isLoading: isSaving } = useUpdateProfile();
 
   const [name, setName] = useState("");
-  const [logo, setLogo] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isAuthLoading && user && !isOwner) {
-      router.replace("/dashboard");
-    }
-  }, [isAuthLoading, isOwner, router, user]);
+  const [phone, setPhone] = useState("");
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    setName(user.organizationName ?? "");
-    setLogo(user.organizationLogo ?? null);
+    setName(user.name ?? "");
+    setPhone(user.phone ?? "");
+    setProfileImage(user.profileImage ?? null);
   }, [user]);
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -36,25 +38,24 @@ export default function DashboardCompanyPage() {
 
     const trimmedName = name.trim();
     if (trimmedName.length < 2) {
-      toast.error("Organization name must be at least 2 characters.");
+      toast.error("Name must be at least 2 characters.");
       return;
     }
 
-    updateOrganization(
+    updateProfile(
       {
         name: trimmedName,
-        logo,
+        phone: phone.trim() || undefined,
+        profileImage,
       },
       {
         onSuccess: async () => {
           await refreshUser();
-          toast.success("Organization updated");
+          toast.success("Profile updated");
         },
         onError: (error) => {
           const message =
-            error instanceof Error
-              ? error.message
-              : "Unable to update organization.";
+            error instanceof Error ? error.message : "Unable to update profile.";
           toast.error(message);
         },
       },
@@ -70,15 +71,11 @@ export default function DashboardCompanyPage() {
     );
   }
 
-  if (user.role !== Role.OWNER) {
-    return null;
-  }
-
   return (
     <div className="space-y-6 p-6">
       <OrgPageHeader
-        title="Company Settings"
-        description="Update your organization name and logo. Organization email cannot be changed here."
+        title="My Profile"
+        description="Update your name, phone, and profile photo. Email cannot be changed here."
       />
 
       <form
@@ -86,19 +83,19 @@ export default function DashboardCompanyPage() {
         className="mx-auto max-w-2xl space-y-8 rounded-2xl border border-default bg-surface p-6 shadow-sm sm:p-8"
       >
         <ImageUploadField
-          label="Organization logo"
-          description="Uploads immediately. Save the form to apply it to your organization."
-          value={logo}
-          onChange={setLogo}
-          purpose="logo"
-          fallbackInitials={name.slice(0, 2).toUpperCase() || "CO"}
+          label="Profile photo"
+          description="Uploads immediately. Save the form to apply it to your account."
+          value={profileImage}
+          onChange={setProfileImage}
+          purpose="profile"
+          fallbackInitials={getInitials(name || user.name)}
           disabled={isSaving}
         />
 
         <div className="space-y-6">
           <UnderlineField
-            id="org-name"
-            label="Organization name"
+            id="profile-name"
+            label="Full name"
             type="text"
             value={name}
             onChange={setName}
@@ -106,19 +103,23 @@ export default function DashboardCompanyPage() {
           />
 
           <UnderlineField
-            id="org-email"
-            label="Organization email"
+            id="profile-email"
+            label="Email"
             type="email"
-            value={user.organizationEmail ?? ""}
+            value={user.email}
             onChange={() => {}}
             disabled
-            placeholder="Not set"
+          />
+
+          <UnderlineField
+            id="profile-phone"
+            label="Phone (optional)"
+            type="tel"
+            value={phone}
+            onChange={setPhone}
+            disabled={isSaving}
           />
         </div>
-
-        <p className="text-xs text-muted">
-          Contact support if you need to change the organization email address.
-        </p>
 
         <div className="flex justify-end border-t border-default pt-6">
           <button

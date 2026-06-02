@@ -106,8 +106,11 @@ export function useInviteBranchManager() {
       slug: string;
       data: InviteBranchManagerInput;
     }) => branchApi.inviteBranchManager(slug, data),
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({ queryKey: ['branches'] });
+      await queryClient.invalidateQueries({
+        queryKey: ['branches', variables.slug],
+      });
     },
   });
 

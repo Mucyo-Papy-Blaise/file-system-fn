@@ -6,6 +6,7 @@ import type {
   InviteDeptManagerInput,
   UpdateDepartmentInput,
 } from "@/types/department";
+import type { Member } from "@/types/member";
 
 type DepartmentApiRecord = Department;
 
@@ -31,11 +32,39 @@ export const departmentApi = {
     return response.data.data.map(normalizeDepartment);
   },
 
-  async getDepartmentBySlug(slug: string): Promise<Department> {
-    const response = await apiClient.get<ApiSuccessEnvelope<DepartmentApiRecord>>(
-      `/departments/${encodeURIComponent(slug)}`,
-    );
-    return normalizeDepartment(response.data);
+  async getDepartmentBySlug(
+    slug: string,
+    options?: { page?: number; limit?: number },
+  ): Promise<Department> {
+    const params = new URLSearchParams({
+      page: String(options?.page ?? 1),
+      limit: String(options?.limit ?? 100),
+    });
+    const response = await apiClient.get<
+      ApiSuccessEnvelope<
+        DepartmentApiRecord & {
+          users?:
+            | Member[]
+            | { data: Member[]; meta: { total: number } };
+        }
+      >
+    >(`/departments/${encodeURIComponent(slug)}?${params.toString()}`);
+
+    const { users: usersPayload, ...rest } = response.data;
+    const members = Array.isArray(usersPayload)
+      ? usersPayload
+      : (usersPayload?.data ?? []);
+    const memberCount =
+      rest.memberCount ??
+      (Array.isArray(usersPayload)
+        ? usersPayload.length
+        : (usersPayload?.meta?.total ?? members.length));
+
+    return normalizeDepartment({
+      ...rest,
+      members,
+      memberCount,
+    });
   },
 
   async updateDepartment(slug: string, data: UpdateDepartmentInput): Promise<Department> {

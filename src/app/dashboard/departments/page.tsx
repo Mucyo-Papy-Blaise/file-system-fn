@@ -16,6 +16,12 @@ import { AddDepartmentModal } from "@/components/departments/AddDepartmentModal"
 import { EditDepartmentModal } from "@/components/departments/EditDepartmentModal";
 import { InviteAdminModal } from "@/components/departments/InviteAdminModal";
 import { DepartmentRow } from "@/components/departments/DepartmentRow";
+import { OrgPageHeader } from "@/components/org/OrgPageHeader";
+import {
+  OrgTableHead,
+  OrgTableShell,
+  OrgTableTh,
+} from "@/components/org/OrgTableShell";
 import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -26,9 +32,12 @@ export default function DashboardDepartmentsPage() {
   const router = useRouter();
   const { user, isLoading, isOwner, isBranchManager } = useAuth();
   const { departments, isLoading: isDepartmentsLoading, isError } = useGetDepartments();
-  const { mutate: createDepartment, isLoading: isCreatingDepartment } = useCreateDepartment();
-  const { mutate: updateDepartment, isLoading: isUpdatingDepartment } = useUpdateDepartment();
-  const { mutate: deleteDepartment, isLoading: isDeletingDepartment } = useDeleteDepartment();
+  const { mutate: createDepartment, isLoading: isCreatingDepartment } =
+    useCreateDepartment();
+  const { mutate: updateDepartment, isLoading: isUpdatingDepartment } =
+    useUpdateDepartment();
+  const { mutate: deleteDepartment, isLoading: isDeletingDepartment } =
+    useDeleteDepartment();
   const { mutate: inviteDeptManager, isLoading: isInvitingAdmin } =
     useInviteDeptManager();
 
@@ -36,10 +45,18 @@ export default function DashboardDepartmentsPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
+    null,
+  );
 
   const isBusy =
-    isCreatingDepartment || isUpdatingDepartment || isDeletingDepartment || isInvitingAdmin;
+    isCreatingDepartment ||
+    isUpdatingDepartment ||
+    isDeletingDepartment ||
+    isInvitingAdmin;
+
+  const canManage =
+    user?.role === Role.OWNER || user?.role === Role.BRANCH_MANAGER;
 
   useEffect(() => {
     if (!isLoading && user && !isOwner && !isBranchManager) {
@@ -47,121 +64,33 @@ export default function DashboardDepartmentsPage() {
     }
   }, [isBranchManager, isLoading, isOwner, router, user]);
 
-  const handleAddDepartment = (name: string) => {
-    createDepartment({ name }, {
-      onSuccess: () => {
-        toast.success("Department created successfully");
-      },
-      onError: (error) => {
-        const message = error instanceof Error ? error.message : "Unable to create department.";
-        toast.error(message);
-      },
-    });
-  };
-
-  const handleEditDepartment = (name: string) => {
-    if (!selectedDepartment) return;
-
-    updateDepartment(
-      { slug: selectedDepartment.slug, data: { name } },
-      {
-        onSuccess: () => {
-          toast.success("Department updated successfully");
-        },
-        onError: (error) => {
-          const message = error instanceof Error ? error.message : "Unable to update department.";
-          toast.error(message);
-        },
-      },
-    );
-  };
-
-  const handleDeleteDepartment = async () => {
-    if (!selectedDepartment) return;
-
-    deleteDepartment(selectedDepartment.slug, {
-      onSuccess: () => {
-        toast.success("Department deleted successfully");
-      },
-      onError: (error) => {
-        const message = error instanceof Error ? error.message : "Unable to delete department.";
-        toast.error(message);
-      },
-    });
-    setIsDeleteModalOpen(false);
-  };
-
-  const handleInviteDeptManager = (data: { email: string }) => {
-    if (!selectedDepartment) return;
-
-    inviteDeptManager(
-      { slug: selectedDepartment.slug, data },
-      {
-        onSuccess: () => {
-          toast.success("Department manager invitation sent successfully");
-        },
-        onError: (error) => {
-          const message =
-            error instanceof Error
-              ? error.message
-              : "Unable to send department manager invite.";
-          toast.error(message);
-        },
-      },
-    );
-  };
-
-  const openEdit = (department: Department) => {
-    setSelectedDepartment(department);
-    setIsEditModalOpen(true);
-  };
-
-  const openInvite = (department: Department) => {
-    setSelectedDepartment(department);
-    setIsInviteModalOpen(true);
-  };
-
-  const openDelete = (department: Department) => {
-    setSelectedDepartment(department);
-    setIsDeleteModalOpen(true);
-  };
-
   if (isLoading || !user) {
     return (
       <div className="space-y-6 p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-3">
-            <LoadingSkeleton width={280} height={32} />
-            <LoadingSkeleton width="60%" height={18} />
-          </div>
-          <LoadingSkeleton width={140} height={44} rounded="1.5rem" />
-        </div>
-        <div className="rounded border border-default bg-surface p-6">
-          {[...Array(4)].map((index) => (
-            <div key={index} className="grid gap-4 md:grid-cols-[2.5fr_1fr_1fr_1fr_auto] py-4">
-              <LoadingSkeleton width="100%" height={20} />
-              <LoadingSkeleton width="100%" height={20} />
-              <LoadingSkeleton width="100%" height={20} />
-              <LoadingSkeleton width="100%" height={20} />
-              <LoadingSkeleton width={32} height={32} rounded="9999px" />
-            </div>
-          ))}
-        </div>
+        <LoadingSkeleton width={280} height={32} />
+        <LoadingSkeleton height={280} rounded="1rem" />
       </div>
     );
   }
 
+  const newDepartmentButton = canManage ? (
+    <button
+      type="button"
+      onClick={() => setIsAddModalOpen(true)}
+      className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
+    >
+      <Plus className="h-4 w-4" />
+      New Department
+    </button>
+  ) : undefined;
+
   if (isError) {
     return (
       <div className="space-y-6 p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Departments</h1>
-            <p className="mt-1 max-w-2xl text-sm text-secondary">
-              We were unable to load departments. Please try again.
-            </p>
-          </div>
-        </div>
+        <OrgPageHeader
+          title="Departments"
+          description="Manage departments, assign administrators, and keep teams organized."
+        />
         <EmptyState
           title="Unable to load departments"
           description="There was a problem fetching the department list. Refresh to try again."
@@ -175,34 +104,35 @@ export default function DashboardDepartmentsPage() {
   if (!departments.length && !isDepartmentsLoading) {
     return (
       <div className="space-y-6 p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Departments</h1>
-            <p className="mt-1 max-w-2xl text-sm text-secondary">
-              Create and manage departments for the organization.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 rounded bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
-          >
-            <Plus className="h-4 w-4" />
-            Add Department
-          </button>
-        </div>
+        <OrgPageHeader
+          title="Departments"
+          description="Create and manage departments for the organization."
+          action={newDepartmentButton}
+        />
         <EmptyState
           title="No departments yet"
-          description="Create your first department and manage users by department.
-          "
+          description="Create your first department and manage users by department."
           actionLabel="Create a Department"
           onAction={() => setIsAddModalOpen(true)}
         />
-
         <AddDepartmentModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
-          onConfirm={handleAddDepartment}
+          onConfirm={(name) => {
+            createDepartment(
+              { name },
+              {
+                onSuccess: () => toast.success("Department created successfully"),
+                onError: (error) => {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Unable to create department.",
+                  );
+                },
+              },
+            );
+          }}
           isSubmitting={isCreatingDepartment}
         />
       </div>
@@ -211,53 +141,27 @@ export default function DashboardDepartmentsPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Departments</h1>
-          <p className="mt-1 max-w-2xl text-sm text-secondary">
-            Manage departments, assign administrators, and keep teams organized.
-          </p>
-        </div>
+      <OrgPageHeader
+        title="Departments"
+        description="Manage departments, assign administrators, and keep teams organized."
+        action={newDepartmentButton}
+      />
 
-        <button
-          type="button"
-          onClick={() => setIsAddModalOpen(true)}
-          className="inline-flex items-center justify-center gap-2 rounded bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
-        >
-          <Plus className="h-4 w-4" />
-          New Department
-        </button>
-      </div>
-
-      <div className="overflow-hidden rounded-3xl border border-default bg-surface text-sm text-foreground">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-[var(--color-bg-secondary)] text-secondary">
-            <tr className="text-xs font-semibold uppercase tracking-[0.14em]">
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Members</th>
-              <th className="px-4 py-3">Folders</th>
-              <th className="px-4 py-3">Created</th>
-              <th className="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
+      <OrgTableShell>
+        <table className="w-full min-w-[640px] text-sm">
+          <OrgTableHead>
+            <OrgTableTh>Name</OrgTableTh>
+            <OrgTableTh>Members</OrgTableTh>
+            <OrgTableTh>Folders</OrgTableTh>
+            <OrgTableTh>Created</OrgTableTh>
+            <OrgTableTh align="right">Actions</OrgTableTh>
+          </OrgTableHead>
           <tbody>
             {isDepartmentsLoading
               ? [...Array(4)].map((_, index) => (
                   <tr key={index} className="border-t border-default">
-                    <td className="px-4 py-4">
-                      <LoadingSkeleton width="80%" height={20} />
-                    </td>
-                    <td className="px-4 py-4">
-                      <LoadingSkeleton width={40} height={20} />
-                    </td>
-                    <td className="px-4 py-4">
-                      <LoadingSkeleton width={40} height={20} />
-                    </td>
-                    <td className="px-4 py-4">
-                      <LoadingSkeleton width={120} height={20} />
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <LoadingSkeleton width={120} height={32} />
+                    <td colSpan={5} className="px-5 py-4">
+                      <LoadingSkeleton height={40} rounded="0.5rem" />
                     </td>
                   </tr>
                 ))
@@ -265,21 +169,44 @@ export default function DashboardDepartmentsPage() {
                   <DepartmentRow
                     key={department.id}
                     department={department}
-                    onEdit={() => openEdit(department)}
-                    onInviteAdmin={() => openInvite(department)}
-                    onDelete={() => openDelete(department)}
+                    onEdit={() => {
+                      setSelectedDepartment(department);
+                      setIsEditModalOpen(true);
+                    }}
+                    onInviteAdmin={() => {
+                      setSelectedDepartment(department);
+                      setIsInviteModalOpen(true);
+                    }}
+                    onDelete={() => {
+                      setSelectedDepartment(department);
+                      setIsDeleteModalOpen(true);
+                    }}
                     isBusy={isBusy}
                   />
                 ))}
           </tbody>
         </table>
-      </div>
+      </OrgTableShell>
 
       <AddDepartmentModal
         key="add-department-modal"
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onConfirm={handleAddDepartment}
+        onConfirm={(name) => {
+          createDepartment(
+            { name },
+            {
+              onSuccess: () => toast.success("Department created successfully"),
+              onError: (error) => {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "Unable to create department.",
+                );
+              },
+            },
+          );
+        }}
         isSubmitting={isCreatingDepartment}
       />
       <EditDepartmentModal
@@ -287,21 +214,68 @@ export default function DashboardDepartmentsPage() {
         isOpen={isEditModalOpen}
         departmentName={selectedDepartment?.name ?? ""}
         onClose={() => setIsEditModalOpen(false)}
-        onConfirm={handleEditDepartment}
+        onConfirm={(name) => {
+          if (!selectedDepartment) return;
+          updateDepartment(
+            { slug: selectedDepartment.slug, data: { name } },
+            {
+              onSuccess: () => toast.success("Department updated successfully"),
+              onError: (error) => {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "Unable to update department.",
+                );
+              },
+            },
+          );
+        }}
         isSubmitting={isUpdatingDepartment}
       />
       <InviteAdminModal
         key={`invite-${selectedDepartment?.id ?? "none"}-${isInviteModalOpen}`}
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
-        onConfirm={handleInviteDeptManager}
+        onConfirm={(data) => {
+          if (!selectedDepartment) return;
+          inviteDeptManager(
+            { slug: selectedDepartment.slug, data },
+            {
+              onSuccess: () => {
+                toast.success("Department manager invitation sent successfully");
+              },
+              onError: (error) => {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "Unable to send department manager invite.",
+                );
+              },
+            },
+          );
+        }}
         isSubmitting={isInvitingAdmin}
       />
       <DeleteConfirmationModal
         key={`delete-${selectedDepartment?.id ?? "none"}-${isDeleteModalOpen}`}
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleDeleteDepartment}
+        onConfirm={async () => {
+          if (!selectedDepartment) return;
+          deleteDepartment(selectedDepartment.slug, {
+            onSuccess: () => {
+              toast.success("Department deleted successfully");
+              setIsDeleteModalOpen(false);
+            },
+            onError: (error) => {
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "Unable to delete department.",
+              );
+            },
+          });
+        }}
         title="Delete Department"
         description="Deleting a department will remove it from the organization and revoke related admin assignments."
         itemNameToConfirm={selectedDepartment?.name ?? ""}

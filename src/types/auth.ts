@@ -12,12 +12,26 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
+  profileImage?: string | null;
   role: Role;
   organizationId: string;
   branchId?: string | null;
   departmentId?: string | null;
   organizationName?: string | null;
   organizationLogo?: string | null;
+  organizationEmail?: string | null;
+}
+
+export interface UpdateProfilePayload {
+  name?: string;
+  phone?: string;
+  profileImage?: string | null;
+}
+
+export interface UpdateOrganizationPayload {
+  name?: string;
+  logo?: string | null;
 }
 
 export interface AuthSuccessResponse {

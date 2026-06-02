@@ -175,18 +175,24 @@ export const documentApi = {
     return normalizeTrashItem(response.data);
   },
 
-  async bulkUpload(files: File[], folderId?: string): Promise<{ saved: Document[]; failed: string[] }> {
+  async bulkUpload(
+    files: File[],
+    folderId?: string,
+  ): Promise<{ saved: Document[]; failed: { fileName: string; reason: string }[] }> {
     const form = new FormData();
     files.forEach((f) => form.append('files', f));
     if (folderId) form.append('folderId', folderId);
 
     const response = await apiClient.postFormData<
-      ApiSuccessEnvelope<{ saved: DocumentApiRecord[]; failed: string[] }>
+      ApiSuccessEnvelope<{
+        saved: DocumentApiRecord[];
+        failed: { fileName: string; reason: string }[];
+      }>
     >("/documents/bulk", form);
 
     return {
       saved: response.data.saved.map(normalizeDocument),
-      failed: response.data.failed,
+      failed: response.data.failed ?? [],
     };
   },
 

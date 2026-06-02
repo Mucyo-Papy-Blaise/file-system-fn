@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ChevronDown,
   ChevronLeft,
@@ -10,7 +11,9 @@ import {
   Eye,
   FileText,
   FolderOpen,
+  LibraryBig,
   Search,
+  Share2,
   SlidersHorizontal,
 } from "lucide-react";
 import { SearchHighlight } from "@/components/search/SearchHighlight";
@@ -27,7 +30,9 @@ import type { SearchDocumentHit, SearchFilters } from "@/types/search";
 const MIN_QUERY_LENGTH = 2;
 
 export default function DashboardSearchPage() {
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q") ?? "";
+  const [query, setQuery] = useState(initialQuery);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [categoryId, setCategoryId] = useState<string | undefined>();
@@ -53,10 +58,19 @@ export default function DashboardSearchPage() {
   const { document: selectedDocument, isLoading: isDocumentLoading } =
     useGetDocumentById(selectedDocumentId ?? "");
 
+  useEffect(() => {
+    setQuery(searchParams.get("q") ?? "");
+    setPage(1);
+  }, [searchParams]);
+
   const documents = searchResult?.documents.data ?? [];
   const foldersResult = searchResult?.folders.data ?? [];
+  const collectionsResult = searchResult?.collections.data ?? [];
+  const sharedSpacesResult = searchResult?.sharedSpaces.data ?? [];
   const documentTotal = searchResult?.documents.total ?? 0;
   const folderTotal = searchResult?.folders.total ?? 0;
+  const collectionTotal = searchResult?.collections.total ?? 0;
+  const sharedSpaceTotal = searchResult?.sharedSpaces.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(documentTotal / (filters.limit ?? 15)));
   const canSearch = query.trim().length >= MIN_QUERY_LENGTH;
   const hasActiveFilters = Boolean(categoryId || folderId);
@@ -86,11 +100,28 @@ export default function DashboardSearchPage() {
     if (folderTotal > 0) {
       parts.push(`${folderTotal} folder${folderTotal === 1 ? "" : "s"}`);
     }
+    if (collectionTotal > 0) {
+      parts.push(
+        `${collectionTotal} collection${collectionTotal === 1 ? "" : "s"}`,
+      );
+    }
+    if (sharedSpaceTotal > 0) {
+      parts.push(
+        `${sharedSpaceTotal} shared space${sharedSpaceTotal === 1 ? "" : "s"}`,
+      );
+    }
     if (parts.length === 0) {
       return "No matches found.";
     }
     return `Found ${parts.join(" and ")}`;
-  }, [canSearch, documentTotal, folderTotal, isLoading]);
+  }, [
+    canSearch,
+    documentTotal,
+    folderTotal,
+    collectionTotal,
+    sharedSpaceTotal,
+    isLoading,
+  ]);
 
   const handleOpenDocument = (doc: SearchDocumentHit) => {
     if (!doc.fileUrl) return;
@@ -341,7 +372,7 @@ export default function DashboardSearchPage() {
                   {foldersResult.map((folder) => (
                     <li key={folder.id}>
                       <Link
-                        href={`/dashboard/folders?folder=${encodeURIComponent(folder.slug ?? folder.id)}`}
+                        href={`/dashboard/my-folders?folder=${encodeURIComponent(folder.slug ?? folder.id)}`}
                         className="flex items-center gap-3 rounded-2xl border border-default bg-surface p-4 transition hover:border-primary/40"
                       >
                         <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10">
@@ -360,6 +391,66 @@ export default function DashboardSearchPage() {
                   ))}
                 </ul>
               )}
+            </section>
+          ) : null}
+
+          {collectionTotal > 0 ? (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-secondary">
+                Collections
+              </h2>
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {collectionsResult.map((collection) => (
+                  <li key={collection.id}>
+                    <Link
+                      href={`/dashboard/collections/${collection.slug}`}
+                      className="flex items-center gap-3 rounded-2xl border border-default bg-surface p-4 transition hover:border-primary/40"
+                    >
+                      <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10">
+                        <LibraryBig className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-foreground">
+                          {collection.name}
+                        </p>
+                        <p className="text-xs text-secondary">
+                          {collection.documentCount} documents
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {sharedSpaceTotal > 0 ? (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-secondary">
+                Shared spaces
+              </h2>
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {sharedSpacesResult.map((space) => (
+                  <li key={space.id}>
+                    <Link
+                      href={`/dashboard/shared/${space.id}`}
+                      className="flex items-center gap-3 rounded-2xl border border-default bg-surface p-4 transition hover:border-primary/40"
+                    >
+                      <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10">
+                        <Share2 className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-foreground">
+                          {space.name}
+                        </p>
+                        <p className="text-xs text-secondary">
+                          {space.documentCount} documents
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </section>
           ) : null}
         </div>

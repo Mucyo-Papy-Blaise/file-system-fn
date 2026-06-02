@@ -68,7 +68,7 @@ export function DashboardLayout({
       <div
         className={cn(
           "min-h-screen transition-[padding] duration-300 ease-out",
-          sidebarCollapsed ? "lg:pl-[68px]" : "lg:pl-72",
+          sidebarCollapsed ? "lg:pl-[68px]" : "lg:pl-52",
         )}
       >
         <TopBar

@@ -5,19 +5,49 @@ import { useDebounce } from "use-debounce";
 import { searchApi } from "@/api/search.api";
 import type { SearchFilters } from "@/types/search";
 
-export function useSearchCollections(query: string) {
+const MIN_GLOBAL_SEARCH_LENGTH = 2;
+
+export function useGlobalSearch(query: string, limit = 5) {
   const [debouncedQuery] = useDebounce(query, 300);
 
   const queryResult = useQuery({
-    queryKey: ["search", "collections", debouncedQuery],
-    queryFn: () => searchApi.searchCollections(debouncedQuery),
-    enabled: debouncedQuery.length >= 2,
+    queryKey: ["search", "global", debouncedQuery, limit],
+    queryFn: () => searchApi.globalQuickSearch(debouncedQuery, limit),
+    enabled: debouncedQuery.trim().length >= MIN_GLOBAL_SEARCH_LENGTH,
   });
 
+  const result = queryResult.data;
+
   return {
-    collections: queryResult.data ?? [],
+    documents: result?.documents.data ?? [],
+    folders: result?.folders.data ?? [],
+    collections: result?.collections.data ?? [],
+    sharedSpaces: result?.sharedSpaces.data ?? [],
+    totals: {
+      documents: result?.documents.total ?? 0,
+      folders: result?.folders.total ?? 0,
+      collections: result?.collections.total ?? 0,
+      sharedSpaces: result?.sharedSpaces.total ?? 0,
+    },
+    hasResults:
+      (result?.documents.total ?? 0) +
+        (result?.folders.total ?? 0) +
+        (result?.collections.total ?? 0) +
+        (result?.sharedSpaces.total ?? 0) >
+      0,
     isLoading: queryResult.isLoading,
     isError: queryResult.isError,
+    debouncedQuery,
+  };
+}
+
+/** @deprecated Use useGlobalSearch — searches documents, folders, collections, and shared spaces */
+export function useSearchCollections(query: string) {
+  const global = useGlobalSearch(query);
+  return {
+    collections: global.collections,
+    isLoading: global.isLoading,
+    isError: global.isError,
   };
 }
 
