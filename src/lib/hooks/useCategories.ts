@@ -48,6 +48,7 @@ export function useCreateCategory() {
 
   return {
     mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
     isLoading: mutation.isPending,
     isError: mutation.isError,
   };

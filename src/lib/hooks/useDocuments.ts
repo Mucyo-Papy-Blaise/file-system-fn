@@ -13,8 +13,6 @@ import type {
   Document,
   DocumentFilters,
   DocumentListResponse,
-  MoveDocumentInput,
-  RenameDocumentInput,
   UpdateDocumentInput,
   ConfirmDocumentData,
 } from "@/types/document";
@@ -116,6 +114,7 @@ export function useUpdateDocument() {
 
   return {
     mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
     isLoading: mutation.isPending,
     isError: mutation.isError,
   };

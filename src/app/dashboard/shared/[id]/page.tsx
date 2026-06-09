@@ -196,6 +196,7 @@ export default function SharedSpaceDetailPage() {
           {documents.map((entry) => {
             const fileMeta = getFileMeta(entry.document.fileName);
             const canReplace = user?.id === entry.document.uploadedBy.id;
+            const canRemove = user?.id === entry.document.uploadedBy.id;
 
             return (
               <div
@@ -264,13 +265,15 @@ export default function SharedSpaceDetailPage() {
                           Replace
                         </DropdownMenuItem>
                       ) : null}
-                      <DropdownMenuItem
-                        onClick={() => setRemovingEntry(entry)}
-                        className="flex items-center gap-2 text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Remove from space
-                      </DropdownMenuItem>
+                      {canRemove ? (
+                        <DropdownMenuItem
+                          onClick={() => setRemovingEntry(entry)}
+                          className="flex items-center gap-2 text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Remove from space
+                        </DropdownMenuItem>
+                      ) : null}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

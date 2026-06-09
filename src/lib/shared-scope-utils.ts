@@ -8,6 +8,36 @@ export interface ScopedResourceRef {
   departmentId?: string | null;
 }
 
+/** Mirrors backend userCanAccessScopedResource for shared collections/spaces. */
+export function canAccessScopedResource(
+  user: AuthUser | null | undefined,
+  resource: ScopedResourceRef,
+): boolean {
+  if (!user) return false;
+  if (user.role === Role.OWNER) return true;
+  if (resource.level === SharedLevel.ORGANIZATION) return true;
+
+  if (resource.level === SharedLevel.BRANCH) {
+    if (!resource.branchId) return Boolean(user.branchId);
+    return resource.branchId === user.branchId;
+  }
+
+  if (resource.level === SharedLevel.DEPARTMENT) {
+    if (resource.branchId && resource.branchId !== user.branchId) {
+      return false;
+    }
+    if (!resource.departmentId) return true;
+    return resource.departmentId === user.departmentId;
+  }
+
+  if (!resource.departmentId) {
+    if (!resource.branchId) return true;
+    return resource.branchId === user.branchId;
+  }
+
+  return resource.departmentId === user.departmentId;
+}
+
 /** Mirrors backend canManageSharedSpace / canManageCollection for shared resources. */
 export function canManageScopedResource(
   user: AuthUser | null | undefined,

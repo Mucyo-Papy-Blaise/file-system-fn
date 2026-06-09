@@ -13,6 +13,7 @@ interface ShareModalProps {
   onClose: () => void;
   documentId?: string;
   collectionId?: string;
+  folderId?: string;
   documentName?: string;
 }
 
@@ -32,6 +33,7 @@ export function ShareModal({
   onClose,
   documentId,
   collectionId,
+  folderId,
   documentName,
 }: ShareModalProps) {
   const { user } = useAuth();
@@ -94,6 +96,7 @@ export function ShareModal({
         message: message.trim() || undefined,
         documentId,
         collectionId,
+        folderId,
       });
       toast.success(`Shared with ${selectedIds.length} members`);
       handleClose();

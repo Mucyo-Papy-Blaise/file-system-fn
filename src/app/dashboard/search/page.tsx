@@ -19,6 +19,7 @@ import {
 import { SearchHighlight } from "@/components/search/SearchHighlight";
 import { AppSelect } from "@/components/ui/AppSelect";
 import { DocumentDetails } from "@/components/documents/DocumentDetails";
+import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { useGetCategories } from "@/lib/hooks/useCategories";
@@ -40,6 +41,7 @@ export default function DashboardSearchPage() {
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
     null,
   );
+  const [previewDocument, setPreviewDocument] = useState<SearchDocumentHit | null>(null);
 
   const filters: SearchFilters = useMemo(
     () => ({
@@ -86,6 +88,27 @@ export default function DashboardSearchPage() {
     setPage(1);
   };
 
+  function getFileType(fileName: string) {
+    const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
+
+    switch (extension) {
+      case "png":
+      case "jpg":
+      case "jpeg":
+      case "gif":
+      case "webp":
+        return `image/${extension === "jpg" ? "jpeg" : extension}`;
+      case "pdf":
+        return "application/pdf";
+      case "xls":
+      case "xlsx":
+      case "csv":
+        return "application/vnd.ms-excel";
+      default:
+        return "application/octet-stream";
+    }
+  }
+
   const statusLine = useMemo(() => {
     if (!canSearch) {
       return "Type at least 2 characters to search.";
@@ -125,7 +148,7 @@ export default function DashboardSearchPage() {
 
   const handleOpenDocument = (doc: SearchDocumentHit) => {
     if (!doc.fileUrl) return;
-    window.open(doc.fileUrl, "_blank", "noopener,noreferrer");
+    setPreviewDocument(doc);
   };
 
   const handleDownloadDocument = (doc: SearchDocumentHit) => {
@@ -462,6 +485,16 @@ export default function DashboardSearchPage() {
           isOpen
           isLoading={isDocumentLoading}
           onClose={() => setSelectedDocumentId(null)}
+        />
+      ) : null}
+
+      {previewDocument ? (
+        <DocumentPreview
+          isOpen
+          onClose={() => setPreviewDocument(null)}
+          fileUrl={previewDocument.fileUrl}
+          fileName={previewDocument.fileName}
+          fileType={getFileType(previewDocument.fileName)}
         />
       ) : null}
     </div>

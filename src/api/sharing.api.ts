@@ -4,12 +4,14 @@ import type {
   CreateShareInput,
   DocumentShare,
   ReplyShareInput,
+  SharedFolderSummary,
   ShareReply,
   ShareUser,
 } from "@/types/sharing";
 import type { Document } from "@/types/document";
 import type { Collection } from "@/types/collection";
 import { Role } from "@/types/enum";
+import { SharedLevel } from "@/types/shared-space";
 
 type ShareUserApiRecord = {
   id: string;
@@ -59,6 +61,9 @@ export type DocumentShareApiRecord = {
     name: string;
     description?: string | null;
     isShared?: boolean;
+    level?: SharedLevel | null;
+    branchId?: string | null;
+    departmentId?: string | null;
     organizationId: string;
     createdAt: string;
     updatedAt: string;
@@ -66,6 +71,20 @@ export type DocumentShareApiRecord = {
     createdById?: string;
     documentCount?: number;
     _count?: { documents: number };
+    documents?: Array<{
+      document: NonNullable<DocumentShareApiRecord["document"]>;
+    }>;
+  } | null;
+  folder?: {
+    id: string;
+    slug: string;
+    name: string;
+    organizationId: string;
+    createdAt: string;
+    updatedAt: string;
+    createdBy?: { id: string; name: string };
+    createdById?: string;
+    documents?: NonNullable<DocumentShareApiRecord["document"]>[];
   } | null;
   replies?: ShareReplyApiRecord[];
 };
@@ -124,14 +143,35 @@ function normalizeCollection(
     name: collection.name,
     description: collection.description ?? null,
     isShared: collection.isShared ?? false,
-    level: null,
+    level: collection.level ?? null,
+    branchId: collection.branchId ?? null,
+    departmentId: collection.departmentId ?? null,
     organizationId: collection.organizationId,
     documentCount:
       collection.documentCount ?? collection._count?.documents ?? 0,
     createdBy,
     createdAt: collection.createdAt,
     updatedAt: collection.updatedAt,
-    documents: [],
+    documents: (collection.documents ?? []).map((entry) =>
+      normalizeDocument(entry.document),
+    ),
+  };
+}
+
+function normalizeFolder(
+  folder: NonNullable<DocumentShareApiRecord["folder"]>,
+): SharedFolderSummary {
+  return {
+    id: folder.id,
+    slug: folder.slug,
+    name: folder.name,
+    organizationId: folder.organizationId,
+    createdAt: folder.createdAt,
+    updatedAt: folder.updatedAt,
+    createdBy: folder.createdBy
+      ? { id: folder.createdBy.id, name: folder.createdBy.name }
+      : { id: folder.createdById ?? "", name: "Unknown" },
+    documents: (folder.documents ?? []).map(normalizeDocument),
   };
 }
 
@@ -146,6 +186,7 @@ export function normalizeShare(share: DocumentShareApiRecord): DocumentShare {
     sharedTo: normalizeShareUser(share.sharedTo),
     document: share.document ? normalizeDocument(share.document) : undefined,
     collection: share.collection ? normalizeCollection(share.collection) : undefined,
+    folder: share.folder ? normalizeFolder(share.folder) : undefined,
     replies: (share.replies ?? []).map(normalizeShareReply),
   };
 }
@@ -167,6 +208,14 @@ export const sharingApi = {
     );
 
     return response.data.map(normalizeShare);
+  },
+
+  async getShareById(id: string): Promise<DocumentShare> {
+    const response = await apiClient.get<ApiSuccessEnvelope<DocumentShareApiRecord>>(
+      `/sharing/${encodeURIComponent(id)}`,
+    );
+
+    return normalizeShare(response.data);
   },
 
   async getSent(): Promise<DocumentShare[]> {

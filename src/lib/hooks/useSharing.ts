@@ -20,6 +20,21 @@ export function useGetInbox() {
   };
 }
 
+export function useGetShareById(shareId: string) {
+  const query = useQuery({
+    queryKey: ["share", shareId],
+    queryFn: () => sharingApi.getShareById(shareId),
+    enabled: Boolean(shareId),
+  });
+
+  return {
+    share: query.data,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
+  };
+}
+
 export function useGetSent() {
   const query = useQuery({
     queryKey: ["sent"],

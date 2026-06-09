@@ -8,6 +8,20 @@ export interface ShareUser {
   role: Role;
 }
 
+export interface SharedFolderSummary {
+  id: string;
+  slug: string;
+  name: string;
+  organizationId: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    name: string;
+  };
+  documents: Document[];
+}
+
 export interface ShareReply {
   id: string;
   message: string;
@@ -25,6 +39,7 @@ export interface DocumentShare {
   sharedTo: ShareUser;
   document?: Document;
   collection?: Collection;
+  folder?: SharedFolderSummary;
   replies: ShareReply[];
 }
 
@@ -33,6 +48,7 @@ export interface CreateShareInput {
   message?: string;
   documentId?: string;
   collectionId?: string;
+  folderId?: string;
 }
 
 export interface ReplyShareInput {

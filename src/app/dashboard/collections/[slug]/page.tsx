@@ -18,6 +18,7 @@ import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal
 import { SortBar } from "@/components/ui/SortBar";
 import { toast } from "sonner";
 import { Role } from "@/types/enum";
+import { canAccessScopedResource } from "@/lib/shared-scope-utils";
 import type { SortOption } from "@/types/document";
 
 export default function CollectionDetailPage() {
@@ -111,7 +112,17 @@ export default function CollectionDetailPage() {
     user.role === Role.OWNER ||
     user.role === Role.BRANCH_MANAGER ||
     user.role === Role.DEPT_MANAGER;
-  const canModify = isCreator || canManageScope;
+  const canAccessShared =
+    collection.isShared &&
+    collection.level != null &&
+    canAccessScopedResource(user, {
+      level: collection.level,
+      branchId: collection.branchId,
+      departmentId: collection.departmentId,
+    });
+  const canAddDocuments = isCreator || canManageScope || canAccessShared;
+  const canRemoveDocument = (uploadedById?: string) =>
+    uploadedById === user.id;
 
   const removingDocument = sortedDocuments.find((d) => d.id === removingDocumentId);
 
@@ -158,7 +169,7 @@ export default function CollectionDetailPage() {
             {new Date(collection.createdAt).toLocaleDateString()}
           </p>
         </div>
-        {canModify && (
+        {canAddDocuments && (
           <button
             onClick={() => setIsAddDocumentModalOpen(true)}
             className="flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
@@ -173,9 +184,9 @@ export default function CollectionDetailPage() {
         <EmptyState
           title="No documents in this collection"
           description="No documents in this collection yet."
-          actionLabel={canModify ? "Add Document" : "Go Back"}
+          actionLabel={canAddDocuments ? "Add Document" : "Go Back"}
           onAction={() =>
-            canModify
+            canAddDocuments
               ? setIsAddDocumentModalOpen(true)
               : router.push("/dashboard/collections")
           }
@@ -211,7 +222,7 @@ export default function CollectionDetailPage() {
                     link.click();
                   }}
                   extraAction={
-                    canModify ? (
+                    canRemoveDocument(document.uploadedBy?.id) ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-default bg-surface text-secondary transition hover:bg-[var(--color-bg-secondary)]"

@@ -82,7 +82,7 @@ export interface CreateDocumentInput {
 
 export interface UpdateDocumentInput {
   title?: string;
-  summary?: string;
+  summary?: string | null;
   documentOwner?: string | null;
   author?: string | null;
   documentType?: string | null;
@@ -91,6 +91,10 @@ export interface UpdateDocumentInput {
   documentDate?: string | null;
   categoryId?: string;
   folderId?: string;
+  fileUrl?: string;
+  fileName?: string;
+  extractedText?: string;
+  category?: string;
 }
 
 export interface DocumentFilters {

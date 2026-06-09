@@ -9,7 +9,7 @@ interface NewFolderModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (name: string) => void;
-  parentId: string;
+  parentId?: string;
 }
 
 export function NewFolderModal({

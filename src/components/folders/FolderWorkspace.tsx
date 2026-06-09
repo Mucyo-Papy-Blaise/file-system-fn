@@ -8,6 +8,7 @@ import {
   FolderPlus,
   Lock,
   Plus,
+  Share2,
   Upload as UploadIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -98,8 +99,10 @@ export function FolderWorkspace({
   }, [initialFolderSlug, pathname, searchParams]);
   const [pendingFolderId, setPendingFolderId] = useState<string | null>(null);
   const [shareTarget, setShareTarget] = useState<{
-    documentId: string;
-    documentName: string;
+    documentId?: string;
+    documentName?: string;
+    folderId?: string;
+    folderName?: string;
   } | null>(null);
   const [folderBranchId, setFolderBranchId] = useState(ALL_SCOPE_VALUE);
   const [folderDepartmentId, setFolderDepartmentId] = useState(ALL_SCOPE_VALUE);
@@ -546,6 +549,21 @@ export function FolderWorkspace({
             <span className="rounded-full border border-default bg-surface px-3 py-1 text-xs font-medium text-secondary">
               {isInFolder ? currentFolderName : "Root"}
             </span>
+            {isInFolder && currentFolderDbId && !readOnly ? (
+              <button
+                type="button"
+                onClick={() =>
+                  setShareTarget({
+                    folderId: currentFolderDbId,
+                    folderName: currentFolderName,
+                  })
+                }
+                className="inline-flex items-center gap-1.5 rounded-full border border-default bg-surface px-3 py-1 text-xs font-semibold text-foreground transition hover:bg-[var(--color-bg-secondary)]"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Share folder
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -703,7 +721,8 @@ export function FolderWorkspace({
         isOpen={Boolean(shareTarget)}
         onClose={() => setShareTarget(null)}
         documentId={shareTarget?.documentId}
-        documentName={shareTarget?.documentName}
+        folderId={shareTarget?.folderId}
+        documentName={shareTarget?.documentName ?? shareTarget?.folderName}
       />
     </div>
   );

@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Download,
   Eye,
+  ExternalLink,
   FileText,
+  FolderOpen,
   Library,
   MessageSquare,
   Trash2,
@@ -162,7 +165,9 @@ export function ShareInboxView({ mode }: ShareInboxViewProps) {
               share.document?.title ||
               share.document?.fileName ||
               share.collection?.name ||
+              share.folder?.name ||
               "Shared item";
+            const isBundleShare = Boolean(share.collection || share.folder);
 
             return (
               <article
@@ -225,6 +230,8 @@ export function ShareInboxView({ mode }: ShareInboxViewProps) {
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-primary">
                     {share.collection ? (
                       <Library className="h-5 w-5" />
+                    ) : share.folder ? (
+                      <FolderOpen className="h-5 w-5" />
                     ) : (
                       <FileText className="h-5 w-5" />
                     )}
@@ -240,7 +247,13 @@ export function ShareInboxView({ mode }: ShareInboxViewProps) {
                     ) : null}
                     {share.collection ? (
                       <p className="mt-1 text-xs text-secondary">
-                        Collection · {share.collection.name}
+                        Collection · {share.collection.documentCount} document
+                        {share.collection.documentCount === 1 ? "" : "s"}
+                      </p>
+                    ) : null}
+                    {share.folder ? (
+                      <p className="mt-1 text-xs text-secondary">
+                        Folder · open to browse documents
                       </p>
                     ) : null}
                   </div>
@@ -260,6 +273,16 @@ export function ShareInboxView({ mode }: ShareInboxViewProps) {
                 ) : null}
 
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {isBundleShare ? (
+                    <Link
+                      href={`/dashboard/inbox/${share.id}`}
+                      onClick={(event) => event.stopPropagation()}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Open & review
+                    </Link>
+                  ) : null}
                   {share.document?.fileUrl ? (
                     <>
                       <button
